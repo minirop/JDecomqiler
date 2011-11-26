@@ -458,68 +458,23 @@ void ClassFile::generate()
 					unsigned char c = ref[zz];
 					switch(c)
 					{
-						case 0x00:
-							// skip "nop"
+						case 0x00: // nop
+							// skip
 							break;
-						case 0x01:
+						case 0x01: // aconst_null
 							W("aconst_null\n");
 							break;
-						case 0x05:
+						case 0x02: // iconst_m1
+							jvm_stack.push_back("-1");
+							break;
+						case 0x03: // iconst_0
+							W("iconst_0\n");
+							break;
+						case 0x04: // iconst_1
+							jvm_stack.push_back("1");
+							break;
+						case 0x05: // iconst_2
 							jvm_stack.push_back("2");
-							break;
-						case 0x2a: // aload_0
-							jvm_stack.push_back("this");
-							break;
-						case 0xb7: // invokespecial
-							{
-								char b1 = ref[++zz];
-								char b2 = ref[++zz];
-								int idx = ((b1 << 8) + b2);
-								
-								CPinfo info = constant_pool[idx];
-								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
-								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
-								
-								QString cii_name = checkClassName(getName(class_index_info.ClassInfo.name_index));
-								QString fun_name = getName(name_and_type_index_info.NameAndTypeInfo.name_index);
-								if(fun_name == "<init>")
-									fun_name = "super";
-								
-								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
-								parametres.pop_back(); // remove the return type
-								
-								QString fun_call = jvm_stack[jvm_stack.size() - parametres.size() - 1];
-								fun_call += ".";
-								fun_call += fun_name;
-								fun_call += "(";
-								for(int pp = 0;pp < parametres.size();pp++)
-								{
-									if(pp > 0)
-										fun_call += ", ";
-									
-									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
-								}
-								jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
-								fun_call += ")";
-								
-								jvm_stack.push_back(fun_call);
-							}
-							break;
-						case 0xb1: // return
-							jvm_stack.clear();
-							W("return;\n");
-							break;
-						case 0xac: // ireturn
-							{
-								QString ret = jvm_stack.back();
-								jvm_stack.clear();
-								W("return ");
-								W(ret.toAscii());
-								W(";\n");
-							}
-							break;
-						case 0x0a:
-							W("lconst_1\n");
 							break;
 						case 0x06: // iconst_3
 							jvm_stack.push_back("3");
@@ -527,29 +482,37 @@ void ClassFile::generate()
 						case 0x07: // iconst_4
 							jvm_stack.push_back("4");
 							break;
-						case 0x60: // iadd
+						case 0x08: // iconst_5
+							W("iconst_5\n");
+							break;
+						case 0x09: // lconst_0
+							W("lconst_0\n");
+							break;
+						case 0x0a: // lconst_1
+							W("lconst_1\n");
+							break;
+						case 0x12: // ldc
 							{
-								QString x = jvm_stack.back();
-								jvm_stack.pop_back();
-								QString y = jvm_stack.back();
-								jvm_stack.pop_back();
-								jvm_stack.push_back(x + " + " + y);
+								int idx = ref[++zz];
+								switch(constant_pool[idx].tag)
+								{
+									case CONSTANT_String:
+										jvm_stack.push_back("\""+getName(constant_pool[idx].StringInfo.string_index)+"\"");
+										break;
+									default:
+										qDebug() << "tag :" << constant_pool[idx].tag;
+										qFatal("0x12: unrecognized tag");
+								}
 							}
 							break;
-						case 0x68: // imul
-							{
-								QString x = jvm_stack.back();
-								jvm_stack.pop_back();
-								QString y = jvm_stack.back();
-								jvm_stack.pop_back();
-								jvm_stack.push_back(x + " * " + y);
-							}
+						case 0x1b: // iload_1
+							if(m.parametersType.size() > 0)
+								jvm_stack.push_back("param1");
+							else
+								jvm_stack.push_back("i1");
 							break;
-						case 0x02: // iconst_m1
-							jvm_stack.push_back("-1");
-							break;
-						case 0x04: // iconst_1
-							jvm_stack.push_back("1");
+						case 0x2a: // aload_0
+							jvm_stack.push_back("this");
 							break;
 						case 0x3c: // istore_1
 							if(!istore[1])
@@ -573,14 +536,54 @@ void ClassFile::generate()
 							W(";\n");
 							jvm_stack.pop_back();
 							break;
-						case 0x1b: // iload_1
-							if(m.parametersType.size() > 0)
-								jvm_stack.push_back("param1");
-							else
-								jvm_stack.push_back("i1");
+						case 0x60: // iadd
+							{
+								QString x = jvm_stack.back();
+								jvm_stack.pop_back();
+								QString y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " + " + y);
+							}
 							break;
-						case 0x09:
-							W("lconst_0\n");
+						case 0x68: // imul
+							{
+								QString x = jvm_stack.back();
+								jvm_stack.pop_back();
+								QString y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " * " + y);
+							}
+							break;
+						case 0xac: // ireturn
+							{
+								QString ret = jvm_stack.back();
+								jvm_stack.clear();
+								W("return ");
+								W(ret.toAscii());
+								W(";\n");
+							}
+							break;
+						case 0xb1: // return
+							jvm_stack.clear();
+							W("return;\n");
+							break;
+						case 0xb2: // getstatic
+							{
+								char b1 = ref[++zz];
+								char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
+								
+								QVector<QString> params = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
+								QString retour = params.back();
+								params.pop_back();
+								
+								QString func_call = checkClassName(getName(class_index_info.ClassInfo.name_index)) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index);
+								jvm_stack.push_back(func_call);
+							}
 							break;
 						case 0xb4: // getfield
 							{
@@ -626,41 +629,6 @@ void ClassFile::generate()
 								jvm_stack.pop_back();
 							}
 							break;
-						case 0xb2: // getstatic
-							{
-								char b1 = ref[++zz];
-								char b2 = ref[++zz];
-								int idx = ((b1 << 8) + b2);
-								
-								CPinfo info = constant_pool[idx];
-								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
-								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
-								
-								QVector<QString> params = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
-								QString retour = params.back();
-								params.pop_back();
-								
-								QString func_call = checkClassName(getName(class_index_info.ClassInfo.name_index)) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index);
-								jvm_stack.push_back(func_call);
-							}
-							break;
-						case 0x12: // ldc
-							{
-								int idx = ref[++zz];
-								switch(constant_pool[idx].tag)
-								{
-									case CONSTANT_String:
-										jvm_stack.push_back("\""+getName(constant_pool[idx].StringInfo.string_index)+"\"");
-										break;
-									default:
-										qDebug() << "tag :" << constant_pool[idx].tag;
-										qFatal("0x12: unrecognized tag");
-								}
-							}
-							break;
-						case 0x03:
-							W("iconst_0\n");
-							break;
 						case 0xb6: // invokevirtual
 							{
 								char b1 = ref[++zz];
@@ -690,8 +658,40 @@ void ClassFile::generate()
 								W(");\n");
 							}
 							break;
-						case 0x08:
-							W("iconst_5\n");
+						case 0xb7: // invokespecial
+							{
+								char b1 = ref[++zz];
+								char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
+								
+								QString cii_name = checkClassName(getName(class_index_info.ClassInfo.name_index));
+								QString fun_name = getName(name_and_type_index_info.NameAndTypeInfo.name_index);
+								if(fun_name == "<init>")
+									fun_name = "super";
+								
+								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
+								parametres.pop_back(); // remove the return type
+								
+								QString fun_call = jvm_stack[jvm_stack.size() - parametres.size() - 1];
+								fun_call += ".";
+								fun_call += fun_name;
+								fun_call += "(";
+								for(int pp = 0;pp < parametres.size();pp++)
+								{
+									if(pp > 0)
+										fun_call += ", ";
+									
+									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
+								}
+								jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
+								fun_call += ")";
+								
+								jvm_stack.push_back(fun_call);
+							}
 							break;
 						/*case 0x:
 							W("");
