@@ -505,9 +505,18 @@ void ClassFile::generate()
 								}
 							}
 							break;
-						case 0x1b: // iload_1
+						case 0x1a: // iload_0
 							if(m.parametersType.size() > 0)
 								jvm_stack.push_back("param1");
+							else
+								jvm_stack.push_back("i1");
+							break;
+						case 0x1b: // iload_1
+							if(m.parametersType.size() > 0)
+								if(m.isStatic)
+									jvm_stack.push_back("param2");
+								else
+									jvm_stack.push_back("param1");
 							else
 								jvm_stack.push_back("i1");
 							break;
@@ -532,6 +541,11 @@ void ClassFile::generate()
 								istore[2] = true;
 							}
 							W("i2 = ");
+							W(jvm_stack.back().toAscii());
+							W(";\n");
+							jvm_stack.pop_back();
+							break;
+						case 0x57: // pop
 							W(jvm_stack.back().toAscii());
 							W(";\n");
 							jvm_stack.pop_back();
@@ -688,6 +702,37 @@ void ClassFile::generate()
 									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
 								}
 								jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
+								fun_call += ")";
+								
+								jvm_stack.push_back(fun_call);
+							}
+							break;
+						case 0xb8: // invokestatic
+							{
+								char b1 = ref[++zz];
+								char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
+								
+								QString cii_name = checkClassName(getName(class_index_info.ClassInfo.name_index));
+								QString fun_name = getName(name_and_type_index_info.NameAndTypeInfo.name_index);
+								
+								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
+								parametres.pop_back(); // remove the return type
+								
+								QString fun_call = fun_name;
+								fun_call += "(";
+								for(int pp = 0;pp < parametres.size();pp++)
+								{
+									if(pp > 0)
+										fun_call += ", ";
+									
+									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
+								}
+								jvm_stack.remove(jvm_stack.size() - parametres.size(), parametres.size());
 								fun_call += ")";
 								
 								jvm_stack.push_back(fun_call);
