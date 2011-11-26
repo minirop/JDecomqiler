@@ -95,7 +95,7 @@ ClassFile::ClassFile(QString filename)
 	qDebug().nospace() << fields_count << " fields";
 	for(int i = 0;i < fields_count;i++)
 	{
-		parseField();
+		output.fields.push_back(parseField());
 	}
 	
 	quint16 methods_count;
@@ -124,6 +124,8 @@ void ClassFile::init_init()
 {
 	for(int i = 0;i < 4;i++)
 		istore[i] = false;
+	
+	skip_return = false;
 }
 
 #include <cstdio>
@@ -211,19 +213,43 @@ bool ClassFile::parseConstant()
 	return isDoubleSize;
 }
 
-void ClassFile::parseField()
+FieldOutput ClassFile::parseField()
 {
+	FieldOutput field;
+	
 	quint16 access_flags, name_index, descriptor_index;
 	stream >> access_flags >> name_index >> descriptor_index;
-	qDebug() << "field" << access_flags << getName(name_index) << getName(descriptor_index);
+	
+	field.name = getName(name_index);
+	int i = 0;
+	field.type = parseType(getName(descriptor_index), i);
+	
+	if(access_flags & 0x0001)
+		field.isPublic = true;
+	if(access_flags & 0x0002)
+		field.isPrivate = true;
+	if(access_flags & 0x0004)
+		field.isProtected = true;
+	if(access_flags & 0x0008)
+		field.isStatic = true;
+	if(access_flags & 0x0010)
+		field.isFinal = true;
+	if(access_flags & 0x0040)
+		field.isVolatile = true;
+	if(access_flags & 0x0080)
+		field.isTransient = true;
+	if(access_flags & (~0x00DF))
+		qDebug() << "ERROR: unrecognized flag(s)";
 	
 	quint16 attributes_count;
 	stream >> attributes_count;
 	qDebug().nospace() << "- " << attributes_count << " attributes";
 	for(int i = 0;i < attributes_count;i++)
 	{
-		parseAttribute();
+		field.attributes.push_back(parseAttribute());
 	}
+	
+	return field;
 }
 
 void ClassFile::parseInterface()
@@ -400,24 +426,33 @@ void ClassFile::generate()
 		if(m.isStatic)
 			W("static ");
 		
-		W(m.returnType.toAscii());
-		W(" ");
-		if(m.name == "<init>")
-			W(output.name.toAscii());
-		else
-			W(m.name.toAscii());
-		W("(");
-		int pos = 1;
-		foreach(QString str, m.parametersType)
+		if(m.name == "<clinit>")
 		{
-			if(pos > 1)
-				W(", ");
-			W(str.toAscii());
-			W(" param");
-			W(QByteArray::number(pos));
-			pos++;
+			skip_return = true;
 		}
-		W(") {\n");
+		else
+		{
+			W(m.returnType.toAscii());
+			W(" ");
+			if(m.name == "<init>")
+				W(output.name.toAscii());
+			else
+				W(m.name.toAscii());
+			W("(");
+			int pos = 1;
+			foreach(QString str, m.parametersType)
+			{
+				if(pos > 1)
+					W(", ");
+				W(str.toAscii());
+				W(" param");
+				W(QByteArray::number(pos));
+				pos++;
+			}
+			W(") ");
+		}
+		W("{\n");
+		
 		for(int i = 0;i < m.attributes.size();i++)
 		{
 			QPair<QString, QByteArray> a = m.attributes[i];
@@ -572,14 +607,22 @@ void ClassFile::generate()
 							{
 								QString ret = jvm_stack.back();
 								jvm_stack.clear();
-								W("return ");
-								W(ret.toAscii());
-								W(";\n");
+								if(!skip_return)
+								{
+									W("return ");
+									W(ret.toAscii());
+									W(";\n");
+								}
+								skip_return = false;
 							}
 							break;
 						case 0xb1: // return
 							jvm_stack.clear();
-							W("return;\n");
+							if(!skip_return)
+							{
+								W("return;\n");
+							}
+							skip_return = false;
 							break;
 						case 0xb2: // getstatic
 							{
@@ -597,6 +640,29 @@ void ClassFile::generate()
 								
 								QString func_call = checkClassName(getName(class_index_info.ClassInfo.name_index)) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index);
 								jvm_stack.push_back(func_call);
+							}
+							break;
+						case 0xb3: // putstatic
+							{
+								char b1 = ref[++zz];
+								char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								
+								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
+								
+								QVector<QString> params = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
+								QString retour = params.back();
+								params.pop_back();
+								
+								QString tmp = getName(class_index_info.ClassInfo.name_index) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
+								qDebug() << "lol" << tmp;
+								
+								W(tmp.toAscii());
+								
+								jvm_stack.pop_back();
 							}
 							break;
 						case 0xb4: // getfield
@@ -723,7 +789,7 @@ void ClassFile::generate()
 								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
 								parametres.pop_back(); // remove the return type
 								
-								QString fun_call = fun_name;
+								QString fun_call = cii_name + "." + fun_name;
 								fun_call += "(";
 								for(int pp = 0;pp < parametres.size();pp++)
 								{
@@ -767,6 +833,30 @@ void ClassFile::generate()
 		}
 		W("}\n\n");
 	}
+	
+	foreach(FieldOutput f, output.fields)
+	{
+		if(f.isPublic)
+			W("public ");
+		if(f.isProtected)
+			W("protected ");
+		if(f.isPrivate)
+			W("private ");
+		if(f.isVolatile)
+			W("volatile ");
+		if(f.isTransient)
+			W("transient ");
+		if(f.isFinal)
+			W("final ");
+		if(f.isStatic)
+			W("static ");
+		
+		W(f.type.toAscii());
+		W(" ");
+		W(f.name.toAscii());
+		W(";\n");
+	}
+	
 	W("}\n");
 }
 

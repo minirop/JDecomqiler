@@ -90,7 +90,7 @@ public:
 	
 	QPair<QString, QByteArray> parseAttribute();
 	bool parseConstant();
-	void parseField();
+	FieldOutput parseField();
 	void parseInterface();
 	MethodOutput parseMethod();
 	
@@ -111,6 +111,7 @@ private:
 	QString checkClassName(QString classname);
 	
 	bool istore[4];
+	bool skip_return;
 	
 	QVector<char*> toDelete;
 };

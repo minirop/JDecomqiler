@@ -26,6 +26,7 @@ freely, subject to the following restrictions:
 #define CLASSOUTPUT_H
 
 #include "MethodOutput.h"
+#include "FieldOutput.h"
 
 class ClassOutput
 {
@@ -39,6 +40,7 @@ public:
 	QString extends;
 	QVector<QString> interfaces;
 	QVector<MethodOutput> methods;
+	QVector<FieldOutput> fields;
 	bool isFinal, isAbstract, isInterface, isPublic;
 };
 
