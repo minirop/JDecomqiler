@@ -336,7 +336,6 @@ QString ClassFile::parseType(QString signature, int & i)
 				tmp += signature[i];
 			} while(signature[i] != ';');
 			tmp.chop(1);
-			tmp.replace('/', '.');
 			break;
 		default:
 			qDebug() << "ERROR:" << signature[i];
