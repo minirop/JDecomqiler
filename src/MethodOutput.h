@@ -1,7 +1,7 @@
 /*
 JDecomqiler
 
-Copyright (c) <2011> <Alexander Roper>
+Copyright (c) 2011, 2013 <Alexander Roper>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -29,7 +29,9 @@ class MethodOutput
 {
 public:
 	MethodOutput() :
-		isPublic(false), isProtected(false), isPrivate(false), isAbstract(false), isFinal(false), isStatic(false)
+		isPublic(false), isProtected(false), isPrivate(false), isAbstract(false),
+		isFinal(false), isStatic(false), isSynchronized(false), isBridge(false),
+		isVarargs(false), isNative(false), isStrict(false)
 	{
 	}
 	
@@ -38,6 +40,7 @@ public:
 	QVector<QString> parametersType;
 	QVector< QPair<QString, QByteArray> > attributes;
 	bool isPublic, isProtected, isPrivate, isAbstract, isFinal, isStatic;
+	bool isSynchronized, isBridge, isVarargs, isNative, isStrict;
 };
 
 #endif

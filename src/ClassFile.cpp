@@ -1,7 +1,7 @@
 /*
 JDecomqiler
 
-Copyright (c) <2011> <Alexander Roper>
+Copyright (c) 2011, 2013 <Alexander Roper>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -23,6 +23,7 @@ freely, subject to the following restrictions:
    distribution.
 */
 #include "ClassFile.h"
+#include "access.h"
 #include <QFile>
 #include <QDebug>
 
@@ -224,21 +225,25 @@ FieldOutput ClassFile::parseField()
 	int i = 0;
 	field.type = parseType(getName(descriptor_index), i);
 	
-	if(access_flags & 0x0001)
+	if(access_flags & ACC_PUBLIC)
 		field.isPublic = true;
-	if(access_flags & 0x0002)
+	if(access_flags & ACC_PRIVATE)
 		field.isPrivate = true;
-	if(access_flags & 0x0004)
+	if(access_flags & ACC_PROTECTED)
 		field.isProtected = true;
-	if(access_flags & 0x0008)
+	if(access_flags & ACC_STATIC)
 		field.isStatic = true;
-	if(access_flags & 0x0010)
+	if(access_flags & ACC_FINAL)
 		field.isFinal = true;
-	if(access_flags & 0x0040)
+	if(access_flags & ACC_VOLATILE)
 		field.isVolatile = true;
-	if(access_flags & 0x0080)
+	if(access_flags & ACC_TRANSIENT)
 		field.isTransient = true;
-	if(access_flags & (~0x00DF))
+	if(access_flags & ACC_SYNTHETIC)
+		qDebug() << "Declared synthetic; not present in the source code.";
+	if(access_flags & ACC_ENUM)
+		qDebug() << "is part of an enum.";
+	if(access_flags & ~ACC_FIELD_MASK)
 		qDebug() << "ERROR: unrecognized flag(s)";
 	
 	quint16 attributes_count;
@@ -265,25 +270,31 @@ MethodOutput ClassFile::parseMethod()
 	stream >> access_flags >> name_index >> descriptor_index;
 	method.name = getName(name_index);
 	
-	if(access_flags & 0x0001)
+	if(access_flags & ACC_PUBLIC)
 		method.isPublic = true;
-	if(access_flags & 0x0002)
+	if(access_flags & ACC_PRIVATE)
 		method.isPrivate = true;
-	if(access_flags & 0x0004)
+	if(access_flags & ACC_PROTECTED)
 		method.isProtected = true;
-	if(access_flags & 0x0008)
+	if(access_flags & ACC_STATIC)
 		method.isStatic = true;
-	if(access_flags & 0x0010)
+	if(access_flags & ACC_FINAL)
 		method.isFinal = true;
-	if(access_flags & 0x0020)
-		qDebug() << "is synchronized";
-	if(access_flags & 0x0100)
-		qDebug() << "is native";
-	if(access_flags & 0x0400)
+	if(access_flags & ACC_SYNCHRONIZED)
+		method.isSynchronized = true;
+	if(access_flags & ACC_BRIDGE)
+		method.isBridge = true;
+	if(access_flags & ACC_VARARGS)
+		method.isVarargs = true;
+	if(access_flags & ACC_NATIVE)
+		method.isNative = true;
+	if(access_flags & ACC_ABSTRACT)
 		method.isAbstract = true;
-	if(access_flags & 0x0800)
-		qDebug() << "is strictfp";
-	if(access_flags & (~0x0D3F))
+	if(access_flags & ACC_STRICT)
+		method.isStrict = true;
+	if(access_flags & ACC_SYNTHETIC)
+		qDebug() << "Declared synthetic; not present in the source code.";
+	if(access_flags & ~ACC_METHOD_MASK)
 		qDebug() << "ERROR: unrecognized flag(s)";
 	
 	method.parametersType = parseSignature(getName(descriptor_index));
@@ -347,7 +358,7 @@ QVector<QString> ClassFile::parseSignature(QString signature)
 QString ClassFile::parseType(QString signature, int & i)
 {
 	QString tmp;
-	switch(signature[i].toAscii())
+	switch(signature[i].toLatin1())
 	{
 		case 'V':
 			tmp = "void";
@@ -404,9 +415,12 @@ void ClassFile::generate()
 	else
 		W("class ");
 	
-	W(output.name.toAscii());
-	W(" extends ");
-	W(output.extends.toAscii());
+	W(output.name.toLatin1());
+	if(output.extends != "Object")
+	{
+		W(" extends ");
+		W(output.extends.toLatin1());
+	}
 	W(" {\n");
 	
 	foreach(MethodOutput m, output.methods)
@@ -432,19 +446,21 @@ void ClassFile::generate()
 		}
 		else
 		{
-			W(m.returnType.toAscii());
-			W(" ");
 			if(m.name == "<init>")
-				W(output.name.toAscii());
+				W(output.name.toLatin1());
 			else
-				W(m.name.toAscii());
+			{
+				W(m.returnType.toLatin1());
+				W(" ");
+				W(m.name.toLatin1());
+			}
 			W("(");
 			int pos = 1;
 			foreach(QString str, m.parametersType)
 			{
 				if(pos > 1)
 					W(", ");
-				W(str.toAscii());
+				W(str.toLatin1());
 				W(" param");
 				W(QByteArray::number(pos));
 				pos++;
@@ -477,6 +493,7 @@ void ClassFile::generate()
 				t2 = ref[zz++];
 				int locals = ((t1 << 8) + t2);
 				W(QByteArray::number(locals));
+				QVector<qint32> localsVar(locals, 0);
 				
 				W("\ncode size: ");
 				t1 = ref[zz++];
@@ -503,7 +520,7 @@ void ClassFile::generate()
 							jvm_stack.push_back("-1");
 							break;
 						case 0x03: // iconst_0
-							W("iconst_0\n");
+							jvm_stack.push_back("0");
 							break;
 						case 0x04: // iconst_1
 							jvm_stack.push_back("1");
@@ -558,6 +575,23 @@ void ClassFile::generate()
 						case 0x2a: // aload_0
 							jvm_stack.push_back("this");
 							break;
+						case 0x2b: // aload_1
+							if(m.parametersType.size() > 0)
+								jvm_stack.push_back("param1");
+							else
+								jvm_stack.push_back("a1");
+							break;
+						case 0x3b: // istore_0
+							if(!istore[0])
+							{
+								W("int ");
+								istore[0] = true;
+							}
+							W("i0 = ");
+							W(jvm_stack.back().toLatin1());
+							W(";\n");
+							jvm_stack.pop_back();
+							break;
 						case 0x3c: // istore_1
 							if(!istore[1])
 							{
@@ -565,7 +599,7 @@ void ClassFile::generate()
 								istore[1] = true;
 							}
 							W("i1 = ");
-							W(jvm_stack.back().toAscii());
+							W(jvm_stack.back().toLatin1());
 							W(";\n");
 							jvm_stack.pop_back();
 							break;
@@ -576,12 +610,12 @@ void ClassFile::generate()
 								istore[2] = true;
 							}
 							W("i2 = ");
-							W(jvm_stack.back().toAscii());
+							W(jvm_stack.back().toLatin1());
 							W(";\n");
 							jvm_stack.pop_back();
 							break;
 						case 0x57: // pop
-							W(jvm_stack.back().toAscii());
+							W(jvm_stack.back().toLatin1());
 							W(";\n");
 							jvm_stack.pop_back();
 							break;
@@ -603,6 +637,17 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " * " + y);
 							}
 							break;
+						case 0x84: // iinc
+							{
+								int index = ref[++zz];
+								int byte = ref[++zz];
+								W("i");
+								W(QByteArray::number(index));
+								W(" += ");
+								W(QByteArray::number(byte));
+								W(";\n");
+							}
+							break;
 						case 0xac: // ireturn
 							{
 								QString ret = jvm_stack.back();
@@ -610,7 +655,7 @@ void ClassFile::generate()
 								if(!skip_return)
 								{
 									W("return ");
-									W(ret.toAscii());
+									W(ret.toLatin1());
 									W(";\n");
 								}
 								skip_return = false;
@@ -626,18 +671,20 @@ void ClassFile::generate()
 							break;
 						case 0xb2: // getstatic
 							{
-								char b1 = ref[++zz];
-								char b2 = ref[++zz];
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
 								int idx = ((b1 << 8) + b2);
 								
 								CPinfo info = constant_pool[idx];
 								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
 								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
 								
+								qDebug() << "getstatic" << getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index);
 								QVector<QString> params = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
 								QString retour = params.back();
 								params.pop_back();
 								
+								qDebug() << "->" << getName(class_index_info.ClassInfo.name_index) << "." << getName(name_and_type_index_info.NameAndTypeInfo.name_index);
 								QString func_call = checkClassName(getName(class_index_info.ClassInfo.name_index)) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index);
 								jvm_stack.push_back(func_call);
 							}
@@ -660,7 +707,7 @@ void ClassFile::generate()
 								QString tmp = getName(class_index_info.ClassInfo.name_index) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
 								qDebug() << "lol" << tmp;
 								
-								W(tmp.toAscii());
+								W(tmp.toLatin1());
 								
 								jvm_stack.pop_back();
 							}
@@ -673,7 +720,7 @@ void ClassFile::generate()
 								
 								CPinfo info = constant_pool[idx];
 								
-								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								// CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
 								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
 								
 								QVector<QString> params = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
@@ -694,7 +741,7 @@ void ClassFile::generate()
 								
 								CPinfo info = constant_pool[idx];
 								
-								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								// CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
 								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
 								
 								QVector<QString> params = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
@@ -703,45 +750,46 @@ void ClassFile::generate()
 								
 								QString func_call = checkClassName(jvm_stack[jvm_stack.size() - 2]) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
 								
-								W(func_call.toAscii());
+								W(func_call.toLatin1());
 								
 								jvm_stack.pop_back();
 								jvm_stack.pop_back();
 							}
 							break;
 						case 0xb6: // invokevirtual
-							{
-								char b1 = ref[++zz];
-								char b2 = ref[++zz];
-								int idx = ((b1 << 8) + b2);
+							// {
+								// char b1 = ref[++zz];
+								// char b2 = ref[++zz];
+								// int idx = ((b1 << 8) + b2);
 								
-								CPinfo info = constant_pool[idx];
-								//CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
-								//qDebug() << "invoke virtual" << getName(class_index_info.ClassInfo.name_index);
-								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
+								// CPinfo info = constant_pool[idx];
+								// CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								// qDebug() << "invoke virtual" << getName(class_index_info.ClassInfo.name_index);
+								// CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
 								
-								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
-								parametres.pop_back(); // remove the return type
+								// QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
+								// parametres.pop_back(); // remove the return type
 								
-								W(jvm_stack[jvm_stack.size() - parametres.size() - 1].toAscii());
-								W(".");
-								W(getName(name_and_type_index_info.NameAndTypeInfo.name_index).toAscii());
-								W("(");
-								for(int pp = 0;pp < parametres.size();pp++)
-								{
-									if(pp > 0)
-										W(", ");
+								// QString fun_call = jvm_stack[jvm_stack.size() - parametres.size() - 1];
+								// W(jvm_stack[jvm_stack.size() - parametres.size() - 1].toLatin1());
+								// W(".");
+								// W(getName(name_and_type_index_info.NameAndTypeInfo.name_index).toLatin1());
+								// W("(");
+								// for(int pp = 0;pp < parametres.size();pp++)
+								// {
+									// if(pp > 0)
+										// W(", ");
 									
-									W(jvm_stack[jvm_stack.size() - parametres.size() + pp].toAscii());
-								}
-								jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
-								W(");\n");
-							}
-							break;
+									// W(jvm_stack[jvm_stack.size() - parametres.size() + pp].toLatin1());
+								// }
+								// jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
+								// W(");\n");
+							// }
+							// break;
 						case 0xb7: // invokespecial
 							{
-								char b1 = ref[++zz];
-								char b2 = ref[++zz];
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
 								int idx = ((b1 << 8) + b2);
 								
 								CPinfo info = constant_pool[idx];
@@ -754,8 +802,11 @@ void ClassFile::generate()
 									fun_name = "super";
 								
 								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
+								qDebug() << "parametres" << parametres;
 								parametres.pop_back(); // remove the return type
 								
+								qDebug() << "invokespecial stack size" << jvm_stack.size() << jvm_stack[0];
+								qDebug() << "param count" << parametres.size();
 								QString fun_call = jvm_stack[jvm_stack.size() - parametres.size() - 1];
 								fun_call += ".";
 								fun_call += fun_name;
@@ -768,9 +819,9 @@ void ClassFile::generate()
 									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
 								}
 								jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
-								fun_call += ")";
+								fun_call += ");\n";
 								
-								jvm_stack.push_back(fun_call);
+								W(fun_call.toLatin1());
 							}
 							break;
 						case 0xb8: // invokestatic
@@ -799,9 +850,9 @@ void ClassFile::generate()
 									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
 								}
 								jvm_stack.remove(jvm_stack.size() - parametres.size(), parametres.size());
-								fun_call += ")";
+								fun_call += ");\n";
 								
-								jvm_stack.push_back(fun_call);
+								W(fun_call.toLatin1());
 							}
 							break;
 						/*case 0x:
@@ -814,7 +865,8 @@ void ClassFile::generate()
 							W("");
 							break;*/
 						default:
-							W(QByteArray::number(c));
+							W("Not managed opcode: ");
+							W(QByteArray::number(c, 16));
 							W("\n");
 					}
 					file.flush();
@@ -823,7 +875,7 @@ void ClassFile::generate()
 			else
 			{
 				W("/*\n");
-				W(a.first.toAscii());
+				W(a.first.toLatin1());
 				W("\n");
 				W("***\n");
 				W(a.second.toHex());
@@ -851,9 +903,9 @@ void ClassFile::generate()
 		if(f.isStatic)
 			W("static ");
 		
-		W(f.type.toAscii());
+		W(f.type.toLatin1());
 		W(" ");
-		W(f.name.toAscii());
+		W(f.name.toLatin1());
 		W(";\n");
 	}
 	

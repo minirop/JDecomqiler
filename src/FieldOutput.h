@@ -1,7 +1,7 @@
 /*
 JDecomqiler
 
-Copyright (c) 2011 <Alexander Roper>
+Copyright (c) 2013 <Alexander Roper>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -22,13 +22,22 @@ freely, subject to the following restrictions:
    3. This notice may not be removed or altered from any source
    distribution.
 */
-#include "ClassFile.h"
+#ifndef FIELDOUTPUT_H
+#define FIELDOUTPUT_H
 
-int main(void)
+class FieldOutput
 {
-	ClassFile cf("Test.class");
-	cf.generate();
+public:
+	FieldOutput() :
+		isPublic(false), isProtected(false), isPrivate(false), isVolatile(false),
+		isFinal(false), isStatic(false), isTransient(false)
+	{
+	}
 	
-	system("pause");
-	return 0;
-}
+	QString name;
+	QString type;
+	QVector< QPair<QString, QByteArray> > attributes;
+	bool isPublic, isProtected, isPrivate, isVolatile, isFinal, isStatic, isTransient;
+};
+
+#endif

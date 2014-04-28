@@ -1,7 +1,7 @@
 /*
 JDecomqiler
 
-Copyright (c) <2011> <Alexander Roper>
+Copyright (c) 2011 <Alexander Roper>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -24,6 +24,8 @@ freely, subject to the following restrictions:
 */
 #ifndef CLASSFILE_H
 #define CLASSFILE_H
+
+#define QT_NO_DEBUG 1
 
 #include <QString>
 #include <QVector>
