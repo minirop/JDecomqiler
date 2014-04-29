@@ -591,13 +591,13 @@ void ClassFile::generate()
 							if(m.parametersType.size() > 0)
 								jvm_stack.push_back("param1");
 							else
-								jvm_stack.push_back("i1");
+								jvm_stack.push_back("i0");
 							break;
 						case 0x1b: // iload_1
-							if(m.parametersType.size() > 0)
-								if(m.isStatic)
-									jvm_stack.push_back("param2");
-								else
+							if(m.parametersType.size() > 1)
+								// if(m.isStatic)
+									// jvm_stack.push_back("param2");
+								// else
 									jvm_stack.push_back("param1");
 							else
 								jvm_stack.push_back("i1");
