@@ -23,7 +23,7 @@ freely, subject to the following restrictions:
    distribution.
 */
 #include "ClassFile.h"
-#include "access.h"
+#include "defines.h"
 #include <QFile>
 #include <QDebug>
 
@@ -732,7 +732,6 @@ void ClassFile::generate()
 						case 0x4c: // astore_1
 							{
 								QString varName = jvm_stack.back();
-								qDebug() << varName << store[2] << varTypes[varName];
 								if(!store[1])
 								{
 									W(varTypes[varName].toLatin1());
@@ -748,7 +747,6 @@ void ClassFile::generate()
 						case 0x4d: // astore_2
 							{
 								QString varName = jvm_stack.back();
-								qDebug() << varName << store[2] << varTypes[varName];
 								if(!store[2])
 								{
 									W(varTypes[varName].toLatin1());
@@ -1020,21 +1018,23 @@ void ClassFile::generate()
 								CPinfo class_name = constant_pool[info.ClassInfo.name_index];
 								QString className = checkClassName(class_name.UTF8Info.bytes);
 								
-								qDebug() << "new" << className;
 								W(QString("%1 obj;\n").arg(className).toLatin1());
 								jvm_stack.push_back("obj");
 							}
 							break;
-						/*case 0x:
-							W("");
+						case 0xbc: // newarray
+							{
+								int index = ref[++zz];
+								QString type = typeFromInt(index);
+								QString size = jvm_stack.back();
+								jvm_stack.pop_back();
+								W(QString("%1[] newArr = new %1[%2];\n").arg(type).arg(size).toLatin1());
+								jvm_stack.push_back("newArr");
+								varTypes["newArr"] = type + "[]";
+							}
 							break;
-						case 0x:
-							W("");
-							break;
-						case 0x:
-							W("");
-							break;*/
 						default:
+							qDebug() << "Not managed opcode:" << QByteArray::number(c, 16);
 							W("Not managed opcode: ");
 							W(QByteArray::number(c, 16));
 							W("\n");
@@ -1101,4 +1101,39 @@ QByteArray ClassFile::letterFromType(QString type)
 		return QByteArray(1, 'd');
 	else
 		return QByteArray(1, 'a');
+}
+
+QString ClassFile::typeFromInt(int typeInt)
+{
+	QString ret = "*ERROR*";
+	switch(typeInt)
+	{
+		case T_BOOLEAN:
+			ret = "boolean";
+			break;
+		case T_CHAR:
+			ret = "char";
+			break;
+		case T_FLOAT:
+			ret = "float";
+			break;
+		case T_DOUBLE:
+			ret = "double";
+			break;
+		case T_BYTE:
+			ret = "byte";
+			break;
+		case T_SHORT:
+			ret = "short";
+			break;
+		case T_INT:
+			ret = "int";
+			break;
+		case T_LONG:
+			ret = "long";
+			break;
+		default:
+			;
+	}
+	return ret;
 }

@@ -110,6 +110,7 @@ private:
 	QString parseType(QString signature, int & i);
 	QString checkClassName(QString classname);
 	QByteArray letterFromType(QString type);
+	QString typeFromInt(int typeInt);
 	
 	QVector<char*> toDelete;
 };

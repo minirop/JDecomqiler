@@ -44,4 +44,13 @@ freely, subject to the following restrictions:
 #define ACC_METHOD_MASK  0x1DFF
 #define ACC_FIELD_MASK   0x50DF
 
+#define T_BOOLEAN 4
+#define T_CHAR    5
+#define T_FLOAT   6
+#define T_DOUBLE  7
+#define T_BYTE    8
+#define T_SHORT   9
+#define T_INT     10
+#define T_LONG    11
+
 #endif
