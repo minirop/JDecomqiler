@@ -105,15 +105,11 @@ private:
 	QVector<CPinfo> constant_pool;
 	
 	// functions
-	void init_init();
-	
 	QString getName(quint16 index);
 	QVector<QString> parseSignature(QString signature);
 	QString parseType(QString signature, int & i);
 	QString checkClassName(QString classname);
-	
-	bool istore[4];
-	bool skip_return;
+	QByteArray letterFromType(QString type);
 	
 	QVector<char*> toDelete;
 };

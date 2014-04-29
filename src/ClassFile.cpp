@@ -29,8 +29,6 @@ freely, subject to the following restrictions:
 
 ClassFile::ClassFile(QString filename)
 {
-	init_init();
-	
 	QFile file(filename);
 	if(!file.open(QIODevice::ReadOnly))
 		return;
@@ -118,14 +116,6 @@ ClassFile::ClassFile(QString filename)
 ClassFile::~ClassFile()
 {
 	qDeleteAll(toDelete);
-}
-
-void ClassFile::init_init()
-{
-	for(int i = 0;i < 4;i++)
-		istore[i] = false;
-	
-	skip_return = false;
 }
 
 #include <cstdio>
@@ -449,7 +439,7 @@ void ClassFile::generate()
 	foreach(MethodOutput m, output.methods)
 	{
 		bool isCtor = false;
-		init_init();
+		bool skip_return = false;
 		
 		if(m.isPublic)
 			W("public ");
@@ -489,7 +479,8 @@ void ClassFile::generate()
 				if(pos > 1)
 					W(", ");
 				W(str.toLatin1());
-				W(" param");
+				W(" ");
+				W(letterFromType(str));
 				W(QByteArray::number(pos));
 				pos++;
 			}
@@ -532,12 +523,19 @@ void ClassFile::generate()
 				W(QByteArray::number(code_size));
 				W("\n");
 				W("*/\n");
+				
+				QVector<bool> store(locals, false);
+				int paramCount = m.parametersType.size();
+				for(int storei = 0;storei < paramCount;storei++)
+				{
+					store[storei] = true;
+				}
+				qDebug() << store;
+				
 				int end = code_size + 8;
 				for(;zz < end;zz++)
 				{
 					unsigned char c = ref[zz];
-					qDebug() << "opcode" << QString::number(c, 16);
-					qDebug() << "BEFORE:" << jvm_stack.size();
 					switch(c)
 					{
 						case 0x00: // nop
@@ -588,19 +586,10 @@ void ClassFile::generate()
 							}
 							break;
 						case 0x1a: // iload_0
-							if(m.parametersType.size() > 0)
-								jvm_stack.push_back("param1");
-							else
-								jvm_stack.push_back("i0");
+							jvm_stack.push_back("i0");
 							break;
 						case 0x1b: // iload_1
-							if(m.parametersType.size() > 1)
-								// if(m.isStatic)
-									// jvm_stack.push_back("param2");
-								// else
-									jvm_stack.push_back("param1");
-							else
-								jvm_stack.push_back("i1");
+							jvm_stack.push_back("i1");
 							break;
 						case 0x2a: // aload_0
 							jvm_stack.push_back("this");
@@ -612,10 +601,10 @@ void ClassFile::generate()
 								jvm_stack.push_back("a1");
 							break;
 						case 0x3b: // istore_0
-							if(!istore[0])
+							if(!store[0])
 							{
 								W("int ");
-								istore[0] = true;
+								store[0] = true;
 							}
 							W("i0 = ");
 							W(jvm_stack.back().toLatin1());
@@ -623,10 +612,10 @@ void ClassFile::generate()
 							jvm_stack.pop_back();
 							break;
 						case 0x3c: // istore_1
-							if(!istore[1])
+							if(!store[1])
 							{
 								W("int ");
-								istore[1] = true;
+								store[1] = true;
 							}
 							W("i1 = ");
 							W(jvm_stack.back().toLatin1());
@@ -634,10 +623,10 @@ void ClassFile::generate()
 							jvm_stack.pop_back();
 							break;
 						case 0x3d: // istore_2
-							if(!istore[2])
+							if(!store[2])
 							{
 								W("int ");
-								istore[2] = true;
+								store[2] = true;
 							}
 							W("i2 = ");
 							W(jvm_stack.back().toLatin1());
@@ -908,7 +897,6 @@ void ClassFile::generate()
 							W(QByteArray::number(c, 16));
 							W("\n");
 					}
-					qDebug() << "AFTER:" << jvm_stack.size();
 					file.flush();
 				}
 			}
@@ -957,4 +945,18 @@ QString ClassFile::checkClassName(QString classname)
 	classname.replace('/', '.');
 	classname.remove("java.lang.");
 	return classname;
+}
+
+QByteArray ClassFile::letterFromType(QString type)
+{
+	if(type == "int")
+		return QByteArray(1, 'i');
+	else if(type == "long")
+		return QByteArray(1, 'l');
+	else if(type == "float")
+		return QByteArray(1, 'f');
+	else if(type == "double")
+		return QByteArray(1, 'd');
+	else
+		return QByteArray(1, 'a');
 }
