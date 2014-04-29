@@ -456,7 +456,7 @@ void ClassFile::generate()
 		
 		if(m.name == "<clinit>")
 		{
-			skip_return = true;
+			skip_return = true; // java bytecode have "return" at the end of static initialization blocks
 		}
 		else
 		{
@@ -473,7 +473,7 @@ void ClassFile::generate()
 				
 			}
 			W("(");
-			int pos = 1;
+			int pos = (m.isStatic ? 0 : 1);
 			foreach(QString str, m.parametersType)
 			{
 				if(pos > 1)
@@ -530,19 +530,24 @@ void ClassFile::generate()
 				{
 					store[storei] = true;
 				}
-				qDebug() << store;
+				
+				QVector<QString> retNames;
+				QHash<QString, QString> varTypes;
+				
+				qDebug() << "-------------------------------------";
 				
 				int end = code_size + 8;
 				for(;zz < end;zz++)
 				{
 					unsigned char c = ref[zz];
+					qDebug() << "OPCODE:" << QString::number(c, 16);
 					switch(c)
 					{
 						case 0x00: // nop
 							// skip
 							break;
 						case 0x01: // aconst_null
-							W("aconst_null\n");
+							jvm_stack.push_back("null");
 							break;
 						case 0x02: // iconst_m1
 							jvm_stack.push_back("-1");
@@ -563,13 +568,42 @@ void ClassFile::generate()
 							jvm_stack.push_back("4");
 							break;
 						case 0x08: // iconst_5
-							W("iconst_5\n");
+							jvm_stack.push_back("5");
 							break;
 						case 0x09: // lconst_0
-							W("lconst_0\n");
+							jvm_stack.push_back("0L");
 							break;
 						case 0x0a: // lconst_1
-							W("lconst_1\n");
+							jvm_stack.push_back("1L");
+							break;
+						case 0x0b: // fconst_0
+							jvm_stack.push_back("0.0f");
+							break;
+						case 0x0c: // fconst_1
+							jvm_stack.push_back("1.0f");
+							break;
+						case 0x0d: // fconst_2
+							jvm_stack.push_back("2.0f");
+							break;
+						case 0x0e: // dconst_0
+							jvm_stack.push_back("0.0");
+							break;
+						case 0x0f: // dconst_1
+							jvm_stack.push_back("1.0");
+							break;
+						case 0x10: // bipush
+							{
+								int idx = ref[++zz];
+								jvm_stack.push_back(QString::number(idx));
+							}
+							break;
+						case 0x11: // sipush
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								jvm_stack.push_back(QString::number(idx));
+							}
 							break;
 						case 0x12: // ldc
 							{
@@ -577,12 +611,64 @@ void ClassFile::generate()
 								switch(constant_pool[idx].tag)
 								{
 									case CONSTANT_String:
-										jvm_stack.push_back("\""+getName(constant_pool[idx].StringInfo.string_index)+"\"");
+										{
+											QString str = "\""+getName(constant_pool[idx].StringInfo.string_index)+"\"";
+											varTypes[str] = "String";
+											jvm_stack.push_back(str);
+										}
 										break;
 									default:
 										qDebug() << "tag :" << constant_pool[idx].tag;
 										qFatal("0x12: unrecognized tag");
 								}
+							}
+							break;
+						case 0x13: // ldc_w
+						case 0x14: // ldc2_w
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								switch(constant_pool[idx].tag)
+								{
+									case CONSTANT_String:
+										jvm_stack.push_back("\""+getName(constant_pool[idx].StringInfo.string_index)+"\"");
+										break;
+									default:
+										qDebug() << "tag :" << constant_pool[idx].tag;
+										qFatal("0x13/14: unrecognized tag");
+								}
+							}
+							break;
+						case 0x15: // iload
+							{
+								int idx = ref[++zz];
+								jvm_stack.push_back(QString("i%1").arg(idx));
+							}
+							break;
+						case 0x16: // lload
+							{
+								int idx = ref[++zz];
+								jvm_stack.push_back(QString("l%1").arg(idx));
+							}
+							break;
+						case 0x17: // fload
+							{
+								int idx = ref[++zz];
+								jvm_stack.push_back(QString("f%1").arg(idx));
+							}
+							break;
+						case 0x18: // dload
+							{
+								int idx = ref[++zz];
+								jvm_stack.push_back(QString("d%1").arg(idx));
+							}
+							break;
+						case 0x19: // aload
+							{
+								qDebug() << "aload";
+								int idx = ref[++zz];
+								jvm_stack.push_back(QString("a%1").arg(idx));
 							}
 							break;
 						case 0x1a: // iload_0
@@ -591,14 +677,24 @@ void ClassFile::generate()
 						case 0x1b: // iload_1
 							jvm_stack.push_back("i1");
 							break;
+						case 0x1c: // iload_2
+							jvm_stack.push_back("i2");
+							break;
+						case 0x1d: // iload_3
+							jvm_stack.push_back("i3");
+							break;
 						case 0x2a: // aload_0
-							jvm_stack.push_back("this");
+							// probably "a0 if isStatic == true"
+							if(m.isStatic)
+								jvm_stack.push_back("a0");
+							else
+								jvm_stack.push_back("this");
 							break;
 						case 0x2b: // aload_1
-							if(m.parametersType.size() > 0)
-								jvm_stack.push_back("param1");
-							else
-								jvm_stack.push_back("a1");
+							jvm_stack.push_back("a1");
+							break;
+						case 0x2c: // aload_2
+							jvm_stack.push_back("a2");
 							break;
 						case 0x3b: // istore_0
 							if(!store[0])
@@ -633,10 +729,45 @@ void ClassFile::generate()
 							W(";\n");
 							jvm_stack.pop_back();
 							break;
+						case 0x4c: // astore_1
+							{
+								QString varName = jvm_stack.back();
+								qDebug() << varName << store[2] << varTypes[varName];
+								if(!store[1])
+								{
+									W(varTypes[varName].toLatin1());
+									W(" ");
+									store[1] = true;
+								}
+								W("a1 = ");
+								W(varName.toLatin1());
+								W(";\n");
+								jvm_stack.pop_back();
+							}
+							break;
+						case 0x4d: // astore_2
+							{
+								QString varName = jvm_stack.back();
+								qDebug() << varName << store[2] << varTypes[varName];
+								if(!store[2])
+								{
+									W(varTypes[varName].toLatin1());
+									W(" ");
+									store[2] = true;
+								}
+								W("a2 = ");
+								W(varName.toLatin1());
+								W(";\n");
+								jvm_stack.pop_back();
+							}
+							break;
 						case 0x57: // pop
 							W(jvm_stack.back().toLatin1());
 							W(";\n");
 							jvm_stack.pop_back();
+							break;
+						case 0x59: // dup
+							jvm_stack.push_back(jvm_stack.back());
 							break;
 						case 0x60: // iadd
 							{
@@ -671,28 +802,22 @@ void ClassFile::generate()
 							{
 								QString ret = jvm_stack.back();
 								jvm_stack.pop_back();
-								// if(!skip_return)
-								// {
-									W("return ");
-									W(ret.toLatin1());
-									W(";\n");
-								// }
-								// skip_return = false;
+								W("return ");
+								W(ret.toLatin1());
+								W(";\n");
 							}
 							break;
 						case 0xb0:
-							qDebug() << "areturn" << jvm_stack.size() << jvm_stack[0];
 							W("return ");
 							W(jvm_stack[0].toLatin1());
 							W(";\n");
 							break;
 						case 0xb1: // return
 							jvm_stack.clear();
-							if(!skip_return && !isCtor)
+							if(!skip_return)
 							{
 								W("return;\n");
 							}
-							skip_return = false;
 							break;
 						case 0xb2: // getstatic
 							{
@@ -779,35 +904,6 @@ void ClassFile::generate()
 							}
 							break;
 						case 0xb6: // invokevirtual
-							// {
-								// char b1 = ref[++zz];
-								// char b2 = ref[++zz];
-								// int idx = ((b1 << 8) + b2);
-								
-								// CPinfo info = constant_pool[idx];
-								// CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
-								// qDebug() << "invoke virtual" << getName(class_index_info.ClassInfo.name_index);
-								// CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
-								
-								// QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
-								// parametres.pop_back(); // remove the return type
-								
-								// QString fun_call = jvm_stack[jvm_stack.size() - parametres.size() - 1];
-								// W(jvm_stack[jvm_stack.size() - parametres.size() - 1].toLatin1());
-								// W(".");
-								// W(getName(name_and_type_index_info.NameAndTypeInfo.name_index).toLatin1());
-								// W("(");
-								// for(int pp = 0;pp < parametres.size();pp++)
-								// {
-									// if(pp > 0)
-										// W(", ");
-									
-									// W(jvm_stack[jvm_stack.size() - parametres.size() + pp].toLatin1());
-								// }
-								// jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
-								// W(");\n");
-							// }
-							// break;
 						case 0xb7: // invokespecial
 							{
 								unsigned char b1 = ref[++zz];
@@ -820,17 +916,39 @@ void ClassFile::generate()
 								
 								QString cii_name = checkClassName(getName(class_index_info.ClassInfo.name_index));
 								QString fun_name = getName(name_and_type_index_info.NameAndTypeInfo.name_index);
-								if(fun_name == "<init>")
-									fun_name = "super";
 								
 								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
 								QString returnType = parametres.back();
 								parametres.pop_back(); // remove the return type
 								
-								qDebug() << "opcode" << c << "||" << jvm_stack.size() << ", " << parametres.size() << " => " << (jvm_stack.size() - parametres.size() - 1);
-								QString fun_call = jvm_stack[jvm_stack.size() - parametres.size() - 1];
-								qDebug() << "fun_call" << fun_call;
-								fun_call += ".";
+								QString objectCalledUpon = jvm_stack[jvm_stack.size() - parametres.size() - 1];
+								qDebug() << "invokespecial" << cii_name << fun_name;
+								bool isNewCalled = false;
+								if(fun_name == "<init>")
+								{
+									if(isCtor && objectCalledUpon == "this")
+									{
+										// change this = new ParentClass() to this.super()
+										fun_name = "super";
+									}
+									else
+									{
+										isNewCalled = true;
+										fun_name = cii_name;
+									}
+								}
+								
+								QString fun_call = objectCalledUpon;
+								
+								if(isNewCalled)
+								{
+									fun_call += " = new ";
+								}
+								else
+								{
+									fun_call += ".";
+								}
+								
 								fun_call += fun_name;
 								fun_call += "(";
 								for(int pp = 0;pp < parametres.size();pp++)
@@ -845,8 +963,17 @@ void ClassFile::generate()
 								
 								if(returnType != "void")
 								{
-									fun_call = returnType + " ret = " + fun_call;
-									jvm_stack.push_back("ret");
+									QString retName = "ret" + returnType;
+									QString retNameAndOrType = retName;
+									if(!retNames.contains(returnType))
+									{
+										varTypes[retName] = returnType;
+										retNames.append(returnType);
+										
+										retNameAndOrType = returnType + " " + retName;
+									}
+									fun_call = retNameAndOrType + " = " + fun_call;
+									jvm_stack.push_back(retName);
 								}
 								
 								W(fun_call.toLatin1());
@@ -881,6 +1008,21 @@ void ClassFile::generate()
 								fun_call += ");\n";
 								
 								W(fun_call.toLatin1());
+							}
+							break;
+						case 0xbb: // new
+							{
+								char b1 = ref[++zz];
+								char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_name = constant_pool[info.ClassInfo.name_index];
+								QString className = checkClassName(class_name.UTF8Info.bytes);
+								
+								qDebug() << "new" << className;
+								W(QString("%1 obj;\n").arg(className).toLatin1());
+								jvm_stack.push_back("obj");
 							}
 							break;
 						/*case 0x:
