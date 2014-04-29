@@ -93,7 +93,7 @@ public:
 	QPair<QString, QByteArray> parseAttribute();
 	bool parseConstant();
 	FieldOutput parseField();
-	void parseInterface();
+	QString parseInterface();
 	MethodOutput parseMethod();
 	
 	void generate();

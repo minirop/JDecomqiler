@@ -87,9 +87,8 @@ ClassFile::ClassFile(QString filename)
 	qDebug().nospace() << interfaces_count << " interfaces";
 	for(int i = 0;i < interfaces_count;i++)
 	{
-		parseInterface();
+		output.interfaces.push_back(parseInterface());
 	}
-	stream.skipRawData(interfaces_count * 2);
 	
 	quint16 fields_count;
 	stream >> fields_count;
@@ -257,9 +256,23 @@ FieldOutput ClassFile::parseField()
 	return field;
 }
 
-void ClassFile::parseInterface()
+QString ClassFile::parseInterface()
 {
-	stream.skipRawData(2);
+	quint16 name_index;
+	QString interfaceName;
+	
+	stream >> name_index;
+	CPinfo *data = &constant_pool[name_index];
+	if(data->tag == CONSTANT_Class)
+	{
+		interfaceName = getName(data->ClassInfo.name_index);
+	}
+	else
+	{
+		qDebug() << "ERROR: index" << name_index << "in not a class";
+	}
+	
+	return interfaceName;
 }
 
 MethodOutput ClassFile::parseMethod()
@@ -421,10 +434,21 @@ void ClassFile::generate()
 		W(" extends ");
 		W(output.extends.toLatin1());
 	}
+	if(output.interfaces.size() > 0)
+	{
+		W(" implements ");
+		W(output.interfaces[0].toLatin1());
+		for(int i = 1;i < output.interfaces.size();i++)
+		{
+			W(", ");
+			W(output.interfaces[i].toLatin1());
+		}
+	}
 	W(" {\n");
 	
 	foreach(MethodOutput m, output.methods)
 	{
+		bool isCtor = false;
 		init_init();
 		
 		if(m.isPublic)
@@ -447,12 +471,16 @@ void ClassFile::generate()
 		else
 		{
 			if(m.name == "<init>")
+			{
 				W(output.name.toLatin1());
+				isCtor = true;
+			}
 			else
 			{
 				W(m.returnType.toLatin1());
 				W(" ");
 				W(m.name.toLatin1());
+				
 			}
 			W("(");
 			int pos = 1;
@@ -508,6 +536,8 @@ void ClassFile::generate()
 				for(;zz < end;zz++)
 				{
 					unsigned char c = ref[zz];
+					qDebug() << "opcode" << QString::number(c, 16);
+					qDebug() << "BEFORE:" << jvm_stack.size();
 					switch(c)
 					{
 						case 0x00: // nop
@@ -651,19 +681,25 @@ void ClassFile::generate()
 						case 0xac: // ireturn
 							{
 								QString ret = jvm_stack.back();
-								jvm_stack.clear();
-								if(!skip_return)
-								{
+								jvm_stack.pop_back();
+								// if(!skip_return)
+								// {
 									W("return ");
 									W(ret.toLatin1());
 									W(";\n");
-								}
-								skip_return = false;
+								// }
+								// skip_return = false;
 							}
+							break;
+						case 0xb0:
+							qDebug() << "areturn" << jvm_stack.size() << jvm_stack[0];
+							W("return ");
+							W(jvm_stack[0].toLatin1());
+							W(";\n");
 							break;
 						case 0xb1: // return
 							jvm_stack.clear();
-							if(!skip_return)
+							if(!skip_return && !isCtor)
 							{
 								W("return;\n");
 							}
@@ -679,12 +715,10 @@ void ClassFile::generate()
 								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
 								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
 								
-								qDebug() << "getstatic" << getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index);
 								QVector<QString> params = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
 								QString retour = params.back();
 								params.pop_back();
 								
-								qDebug() << "->" << getName(class_index_info.ClassInfo.name_index) << "." << getName(name_and_type_index_info.NameAndTypeInfo.name_index);
 								QString func_call = checkClassName(getName(class_index_info.ClassInfo.name_index)) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index);
 								jvm_stack.push_back(func_call);
 							}
@@ -705,7 +739,6 @@ void ClassFile::generate()
 								params.pop_back();
 								
 								QString tmp = getName(class_index_info.ClassInfo.name_index) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
-								qDebug() << "lol" << tmp;
 								
 								W(tmp.toLatin1());
 								
@@ -802,12 +835,12 @@ void ClassFile::generate()
 									fun_name = "super";
 								
 								QVector<QString> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
-								qDebug() << "parametres" << parametres;
+								QString returnType = parametres.back();
 								parametres.pop_back(); // remove the return type
 								
-								qDebug() << "invokespecial stack size" << jvm_stack.size() << jvm_stack[0];
-								qDebug() << "param count" << parametres.size();
+								qDebug() << "opcode" << c << "||" << jvm_stack.size() << ", " << parametres.size() << " => " << (jvm_stack.size() - parametres.size() - 1);
 								QString fun_call = jvm_stack[jvm_stack.size() - parametres.size() - 1];
+								qDebug() << "fun_call" << fun_call;
 								fun_call += ".";
 								fun_call += fun_name;
 								fun_call += "(";
@@ -820,6 +853,12 @@ void ClassFile::generate()
 								}
 								jvm_stack.remove(jvm_stack.size() - parametres.size() - 1, parametres.size() + 1);
 								fun_call += ");\n";
+								
+								if(returnType != "void")
+								{
+									fun_call = returnType + " ret = " + fun_call;
+									jvm_stack.push_back("ret");
+								}
 								
 								W(fun_call.toLatin1());
 							}
@@ -869,6 +908,7 @@ void ClassFile::generate()
 							W(QByteArray::number(c, 16));
 							W("\n");
 					}
+					qDebug() << "AFTER:" << jvm_stack.size();
 					file.flush();
 				}
 			}
