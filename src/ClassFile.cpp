@@ -1,7 +1,7 @@
 /*
 JDecomqiler
 
-Copyright (c) 2011, 2013 <Alexander Roper>
+Copyright (c) 2011, 2014 <Alexander Roper>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -1031,6 +1031,13 @@ void ClassFile::generate()
 								W(QString("%1[] newArr = new %1[%2];\n").arg(type).arg(size).toLatin1());
 								jvm_stack.push_back("newArr");
 								varTypes["newArr"] = type + "[]";
+							}
+							break;
+						case 0xbe:
+							{
+								QString arr = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(arr + ".length");
 							}
 							break;
 						default:
