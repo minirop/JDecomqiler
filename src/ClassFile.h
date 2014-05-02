@@ -1,7 +1,7 @@
 /*
 JDecomqiler
 
-Copyright (c) 2011 <Alexander Roper>
+Copyright (c) 2011, 2014 <Alexander Roper>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -25,13 +25,13 @@ freely, subject to the following restrictions:
 #ifndef CLASSFILE_H
 #define CLASSFILE_H
 
-#define QT_NO_DEBUG 1
+#include <cstdint>
+#include <fstream>
+#include <map>
+#include <string>
+#include <tuple>
+#include <vector>
 
-#include <QString>
-#include <QVector>
-#include <QPair>
-#include <QHash>
-#include <QDataStream>
 #include "ClassOutput.h"
 
 enum {
@@ -49,70 +49,91 @@ enum {
 };
 
 struct CPinfo {
-	quint8 tag;
+	std::uint8_t tag;
 	union {
 		struct {
-			quint16 name_index;
+			std::uint16_t name_index;
 		} ClassInfo;
 		struct {
-			quint16 class_index;
-			quint16 name_and_type_index;
+			std::uint16_t class_index;
+			std::uint16_t name_and_type_index;
 		} RefInfo;
 		struct {
-			quint16 string_index;
+			std::uint16_t string_index;
 		} StringInfo;
 		struct {
-			quint32 bytes;
+			std::uint32_t bytes;
 		} IntegerInfo;
 		struct {
-			float bytes;
+			std::uint32_t bytes;
 		} FloatInfo;
 		struct {
-			quint64 bytes;
+			std::uint64_t bytes;
 		} BigIntInfo;
 		struct {
-			quint64 bytes;
+			std::uint64_t bytes;
 		} DoubleInfo;
 		struct {
-			quint16 name_index;
-			quint16 descriptor_index;
+			std::uint16_t name_index;
+			std::uint16_t descriptor_index;
 		} NameAndTypeInfo;
 		struct {
-			quint16 length;
-			char* bytes;
+			std::uint16_t length;
+			char * bytes; // (1) find a better way
 		} UTF8Info;
 	};
+};
+
+class StreamReader
+{
+public:
+	StreamReader();
+	void setStream(std::ifstream * stream);
+	void readRawData(char * s, std::streamsize length);
+	int getPos();
+	
+	StreamReader& operator>>(std::int8_t & i);
+	StreamReader& operator>>(std::int16_t & i);
+	StreamReader& operator>>(std::int32_t & i);
+	StreamReader& operator>>(std::int64_t & i);
+	StreamReader& operator>>(std::uint8_t & u);
+	StreamReader& operator>>(std::uint16_t & u);
+	StreamReader& operator>>(std::uint32_t & u);
+	StreamReader& operator>>(std::uint64_t & u);
+	
+private:
+	std::ifstream * buffer;
 };
 
 class ClassFile
 {
 public:
-	ClassFile(QString filename);
+	ClassFile(std::string filename);
 	~ClassFile();
-	
-	QPair<QString, QByteArray> parseAttribute();
-	bool parseConstant();
-	FieldOutput parseField();
-	QString parseInterface();
-	MethodOutput parseMethod();
 	
 	void generate();
 
 private:
-	QDataStream stream;
-	
 	ClassOutput output;
-	QVector<CPinfo> constant_pool;
+	std::vector<CPinfo> constant_pool;
+	
+	std::vector <char *> toDelete; // find a better way (see (1))
+	
+	StreamReader stream;
 	
 	// functions
-	QString getName(quint16 index);
-	QVector<QString> parseSignature(QString signature);
-	QString parseType(QString signature, int & i);
-	QString checkClassName(QString classname);
-	QByteArray letterFromType(QString type);
-	QString typeFromInt(int typeInt);
+	std::tuple<std::string, std::string> parseAttribute();
+	bool parseConstant();
+	FieldOutput parseField();
+	std::string parseInterface();
+	MethodOutput parseMethod();
 	
-	QVector<char*> toDelete;
+	std::string getName(uint16_t index);
+	std::vector<std::string> parseSignature(std::string signature);
+	std::string parseType(std::string signature, int & i);
+	std::string checkClassName(std::string classname);
+	char letterFromType(std::string type);
+	std::string typeFromInt(int typeInt);
 };
 
 #endif

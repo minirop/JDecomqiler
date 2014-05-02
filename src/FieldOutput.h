@@ -25,6 +25,10 @@ freely, subject to the following restrictions:
 #ifndef FIELDOUTPUT_H
 #define FIELDOUTPUT_H
 
+#include <string>
+#include <tuple>
+#include <vector>
+
 class FieldOutput
 {
 public:
@@ -34,9 +38,9 @@ public:
 	{
 	}
 	
-	QString name;
-	QString type;
-	QVector< QPair<QString, QByteArray> > attributes;
+	std::string name;
+	std::string type;
+	std::vector<std::tuple<std::string, std::string>> attributes;
 	bool isPublic, isProtected, isPrivate, isVolatile, isFinal, isStatic, isTransient;
 };
 

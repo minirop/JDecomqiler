@@ -1,7 +1,7 @@
 /*
 JDecomqiler
 
-Copyright (c) 2011 <Alexander Roper>
+Copyright (c) 2011, 2014 <Alexander Roper>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -25,6 +25,9 @@ freely, subject to the following restrictions:
 #ifndef CLASSOUTPUT_H
 #define CLASSOUTPUT_H
 
+#include <string>
+#include <vector>
+
 #include "MethodOutput.h"
 #include "FieldOutput.h"
 
@@ -36,11 +39,11 @@ public:
 	{
 	}
 	
-	QString name;
-	QString extends;
-	QVector<QString> interfaces;
-	QVector<MethodOutput> methods;
-	QVector<FieldOutput> fields;
+	std::string name;
+	std::string extends;
+	std::vector<std::string> interfaces;
+	std::vector<MethodOutput> methods;
+	std::vector<FieldOutput> fields;
 	bool isFinal, isAbstract, isInterface, isPublic;
 };
 

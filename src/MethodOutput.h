@@ -25,6 +25,10 @@ freely, subject to the following restrictions:
 #ifndef METHODOUTPUT_H
 #define METHODOUTPUT_H
 
+#include <string>
+#include <tuple>
+#include <vector>
+
 class MethodOutput
 {
 public:
@@ -35,10 +39,10 @@ public:
 	{
 	}
 	
-	QString name;
-	QString returnType;
-	QVector<QString> parametersType;
-	QVector< QPair<QString, QByteArray> > attributes;
+	std::string name;
+	std::string returnType;
+	std::vector<std::string> parametersType;
+	std::vector<std::tuple<std::string, std::string>> attributes;
 	bool isPublic, isProtected, isPrivate, isAbstract, isFinal, isStatic;
 	bool isSynchronized, isBridge, isVarargs, isNative, isStrict;
 };
