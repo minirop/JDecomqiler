@@ -602,6 +602,7 @@ void ClassFile::generate()
 			if(std::get<0>(a) == "Code")
 			{
 				const std::string & ref = std::get<1>(a);
+				cout << "DEBUG REF SIZE: " << ref.size() << endl;
 				int zz = 0;
 				
 				std::vector<std::string> jvm_stack;
@@ -641,10 +642,22 @@ void ClassFile::generate()
 				std::vector<std::string> retNames;
 				std::vector<std::string> tmpNames;
 				std::map<std::string, std::string> varTypes;
+				std::map<int, std::vector<std::string>> jumpTargets;
 				
 				int end = code_size + 8;
-				for(;zz < end;zz++)
+				for(int opcodePos = 0;zz < end;zz++)
 				{
+					opcodePos = zz - 8;
+					if(jumpTargets.find(opcodePos) != jumpTargets.end())
+					{
+						for(auto & str : jumpTargets[opcodePos])
+						{
+							W(str);
+						}
+						
+						jumpTargets.erase(opcodePos);
+					}
+					
 					unsigned char c = ref[zz];
 					switch(c)
 					{
@@ -1174,14 +1187,29 @@ void ClassFile::generate()
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
-								int idx = ((b1 << 8) + b2);
+								int idx = ((b1 << 8) + b2) + opcodePos;
+								cout << "DEBUG if: " << ((b1 << 8) + b2) << ", " << opcodePos << " = " << idx << endl;
 								
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								std::string y = jvm_stack.back();
 								jvm_stack.pop_back();
 								W("if(" + x + " > " + y + ") {\n");
-								cout << "if: " << idx << endl;
+								
+								// if goto before closing bracket
+								unsigned char gotoTarget = ref[idx - 3 + 8];
+								if(gotoTarget == 0xa7)
+								{
+									jumpTargets[idx].push_back("} else {\n");
+									unsigned char b1 = ref[idx - 2 + 8];
+									unsigned char b2 = ref[idx - 1 + 8];
+									int idxGoto = ((b1 << 8) + b2) + idx - 3;
+									jumpTargets[idxGoto].push_back("}\n");
+								}
+								else
+								{
+									jumpTargets[idx].push_back("}\n");
+								}
 							}
 							break;
 							//
@@ -1189,9 +1217,10 @@ void ClassFile::generate()
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
-								int idx = ((b1 << 8) + b2);
-								cout << "goto: " << idx << endl;
+								int idx = ((b1 << 8) + b2) + opcodePos;
+								cout << "goto: " << ((b1 << 8) + b2) << ", " << opcodePos << ", " << idx << endl;
 							}
+							break;
 							//
 						case 0xac: // ireturn
 						case 0xad: // lreturn
@@ -1576,12 +1605,14 @@ void ClassFile::generate()
 							break;
 						default:
 							cerr << "Not managed opcode:" << std::hex << static_cast<int>(c) << endl;
-							W("Not managed opcode: ");
+							W("// Not managed opcode: ");
 							W(std::hex << static_cast<int>(c));
 							W("\n");
 					}
 					file.flush();
 				}
+				
+				cerr << "JUMPTARGETS SIZE IS " << jumpTargets.size() << endl;
 			}
 			else
 			{
