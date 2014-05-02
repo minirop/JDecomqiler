@@ -117,7 +117,7 @@ private:
 	ClassOutput output;
 	std::vector<CPinfo> constant_pool;
 	
-	std::vector <char *> toDelete; // find a better way (see (1))
+	std::vector<char *> toDelete; // find a better way (see (1))
 	
 	StreamReader stream;
 	

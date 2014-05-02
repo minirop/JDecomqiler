@@ -885,7 +885,8 @@ void ClassFile::generate()
 							{
 								int index = ref[++zz];
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], varName, index)
+								STORE("Object", varName, index)
+								varTypes["a" + std::to_string(index)] = varTypes[varName];
 							}
 							break;
 						case 0x3b: // istore_0
@@ -939,25 +940,29 @@ void ClassFile::generate()
 						case 0x4b: // astore_0
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], varName, 0)
+								STORE("Object", jvm_stack.back(), 0)
+								varTypes["a0"] = varTypes[varName];
 							}
 							break;
 						case 0x4c: // astore_1
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], varName, 1)
+								STORE("Object", jvm_stack.back(), 1)
+								varTypes["a1"] = varTypes[varName];
 							}
 							break;
 						case 0x4d: // astore_2
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], varName, 2)
+								STORE("Object", jvm_stack.back(), 2)
+								varTypes["a2"] = varTypes[varName];
 							}
 							break;
 						case 0x4e: // astore_3
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], varName, 3)
+								STORE("Object", jvm_stack.back(), 3)
+								varTypes["a3"] = varTypes[varName];
 							}
 							break;
 						case 0x4f: // iastore
@@ -1151,22 +1156,22 @@ void ClassFile::generate()
 							break;
 							//
 						case 0xac: // ireturn
-							{
-								std::string ret = jvm_stack.back();
-								jvm_stack.pop_back();
-								W("return ");
-								W(ret);
-								W(";\n");
-							}
-							break;
-							//
-						case 0xb0:
+						case 0xad: // lreturn
+						case 0xae: // freturn
+						case 0xaf: // dreturn
+						case 0xb0: // areturn
 							W("return ");
-							W(jvm_stack[0]);
+							W(jvm_stack.back());
 							W(";\n");
+							jvm_stack.pop_back();
 							break;
 						case 0xb1: // return
 							jvm_stack.clear();
+							/*
+							static { i = 3; } gets a "return" opcode,
+							since "static { i = 3; return; } is invalid,
+							we need to get rid of it
+							*/
 							if(!skip_return)
 							{
 								W("return;\n");
@@ -1410,7 +1415,12 @@ void ClassFile::generate()
 									}
 								}
 								
-								std::string fun_call = objectCalledUpon;
+								std::string fun_call;
+								if(!isNewCalled)
+									fun_call += "((" + varTypes[objectCalledUpon] + ")";
+								fun_call += objectCalledUpon;
+								if(!isNewCalled)
+									fun_call += ")";
 								
 								if(isNewCalled)
 								{
