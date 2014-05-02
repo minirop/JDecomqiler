@@ -646,7 +646,6 @@ void ClassFile::generate()
 				for(;zz < end;zz++)
 				{
 					unsigned char c = ref[zz];
-					cout << "opcode: " << std::hex << (int)c << endl;
 					switch(c)
 					{
 						case 0x00: // nop
@@ -724,8 +723,7 @@ void ClassFile::generate()
 										}
 										break;
 									default:
-										cout << "tag :" << constant_pool[idx].tag << endl;
-										cerr << "0x12: unrecognized tag" << endl;
+										cerr << "0x12: unrecognized tag " << std::hex << static_cast<int>(constant_pool[idx].tag) << endl;
 										exit(1);
 								}
 							}
@@ -742,8 +740,7 @@ void ClassFile::generate()
 										jvm_stack.push_back("\""+getName(constant_pool[idx].StringInfo.string_index)+"\"");
 										break;
 									default:
-										cout << "tag :" << constant_pool[idx].tag << endl;
-										cerr << "0x13/14: unrecognized tag" << endl;
+										cerr << std::hex << static_cast<int>(c) << ": unrecognized tag " << static_cast<int>(constant_pool[idx].tag) << endl;
 										exit(1);
 								}
 							}
@@ -885,8 +882,9 @@ void ClassFile::generate()
 							{
 								int index = ref[++zz];
 								std::string varName = jvm_stack.back();
-								STORE("Object", varName, index)
-								varTypes["a" + std::to_string(index)] = varTypes[varName];
+								STORE(varTypes[varName], varName, index)
+								// STORE("Object", varName, index)
+								// varTypes["a" + std::to_string(index)] = varTypes[varName];
 							}
 							break;
 						case 0x3b: // istore_0
@@ -940,29 +938,33 @@ void ClassFile::generate()
 						case 0x4b: // astore_0
 							{
 								std::string varName = jvm_stack.back();
-								STORE("Object", jvm_stack.back(), 0)
-								varTypes["a0"] = varTypes[varName];
+								STORE(varTypes[varName], jvm_stack.back(), 0)
+								// STORE("Object", jvm_stack.back(), 0)
+								// varTypes["a0"] = varTypes[varName];
 							}
 							break;
 						case 0x4c: // astore_1
 							{
 								std::string varName = jvm_stack.back();
-								STORE("Object", jvm_stack.back(), 1)
-								varTypes["a1"] = varTypes[varName];
+								STORE(varTypes[varName], jvm_stack.back(), 1)
+								// STORE("Object", jvm_stack.back(), 1)
+								// varTypes["a1"] = varTypes[varName];
 							}
 							break;
 						case 0x4d: // astore_2
 							{
 								std::string varName = jvm_stack.back();
-								STORE("Object", jvm_stack.back(), 2)
-								varTypes["a2"] = varTypes[varName];
+								STORE(varTypes[varName], jvm_stack.back(), 2)
+								// STORE("Object", jvm_stack.back(), 2)
+								// varTypes["a2"] = varTypes[varName];
 							}
 							break;
 						case 0x4e: // astore_3
 							{
 								std::string varName = jvm_stack.back();
-								STORE("Object", jvm_stack.back(), 3)
-								varTypes["a3"] = varTypes[varName];
+								STORE(varTypes[varName], jvm_stack.back(), 3)
+								// STORE("Object", jvm_stack.back(), 3)
+								// varTypes["a3"] = varTypes[varName];
 							}
 							break;
 						case 0x4f: // iastore
@@ -1154,6 +1156,42 @@ void ClassFile::generate()
 								jvm_stack.push_back("(short)" + x);
 							}
 							break;
+						case 0x94: // lcmp
+						case 0x95: // fcmpl
+						case 0x96: // fcmpg
+						case 0x97: // dcmpl
+						case 0x98: // dcmpg
+							{
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " - " + y);
+							}
+							break;
+							//
+						case 0xa2: // if_icmpge
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								W("if(" + x + " > " + y + ") {\n");
+								cout << "if: " << idx << endl;
+							}
+							break;
+							//
+						case 0xa7: // goto
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								cout << "goto: " << idx << endl;
+							}
 							//
 						case 0xac: // ireturn
 						case 0xad: // lreturn
@@ -1264,6 +1302,7 @@ void ClassFile::generate()
 						case 0xb6: // invokevirtual
 						case 0xb7: // invokespecial
 							{
+								bool invokevirtual = (c == 0xb6);
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
 								int idx = ((b1 << 8) + b2);
@@ -1280,8 +1319,9 @@ void ClassFile::generate()
 								parametres.pop_back(); // remove the return type
 								
 								std::string objectCalledUpon = jvm_stack[jvm_stack.size() - parametres.size() - 1];
-								cout << "objectCalledUpon: " << objectCalledUpon << " => " << varTypes[objectCalledUpon] << endl;
+								
 								bool isNewCalled = false;
+								bool isInit = false;
 								
 								if(fun_name == "<init>")
 								{
@@ -1295,9 +1335,16 @@ void ClassFile::generate()
 										isNewCalled = true;
 										fun_name = cii_name;
 									}
+									
+									isInit = true;
 								}
 								
-								std::string fun_call = objectCalledUpon;
+								std::string fun_call;
+								if(!isInit && !invokevirtual)
+									fun_call += "((" + varTypes[objectCalledUpon] + ")";
+								fun_call += objectCalledUpon;
+								if(!isInit && !invokevirtual)
+									fun_call += ")";
 								
 								if(isNewCalled)
 								{
@@ -1398,7 +1445,6 @@ void ClassFile::generate()
 								parametres.pop_back(); // remove the return type
 								
 								std::string objectCalledUpon = jvm_stack[jvm_stack.size() - parametres.size() - 1];
-								cout << "objectCalledUpon: " << objectCalledUpon << " => " << varTypes[objectCalledUpon] << endl;
 								bool isNewCalled = false;
 								
 								if(fun_name == "<init>")
