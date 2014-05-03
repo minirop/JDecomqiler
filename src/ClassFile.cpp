@@ -493,20 +493,25 @@ std::string ClassFile::getName(std::uint16_t index)
 }
 
 #define W(c) file << c
+#define BUFF(c) bufferMethod.push_back(c);
 
 #define STORE(type, value, index) \
-	if(!store[index]) \
 	{ \
-		W(type); \
-		W(" "); \
-		store[index] = true; \
-	} \
-	W(letterFromType(type)); \
-	W(index); \
-	W(" = "); \
-	W(value); \
-	W(";\n"); \
-	jvm_stack.pop_back();
+		std::string buffOutput; \
+		if(!store[index]) \
+		{ \
+			buffOutput += type; \
+			buffOutput += " "; \
+			store[index] = true; \
+		} \
+		buffOutput += letterFromType(type); \
+		buffOutput += std::to_string(index); \
+		buffOutput += " = "; \
+		buffOutput += value; \
+		buffOutput += ";\n"; \
+		jvm_stack.pop_back(); \
+		BUFF(buffOutput); \
+	}
 
 void ClassFile::generate()
 {
@@ -602,7 +607,6 @@ void ClassFile::generate()
 			if(std::get<0>(a) == "Code")
 			{
 				const std::string & ref = std::get<1>(a);
-				cout << "DEBUG REF SIZE: " << ref.size() << endl;
 				int zz = 0;
 				
 				std::vector<std::string> jvm_stack;
@@ -643,21 +647,13 @@ void ClassFile::generate()
 				std::vector<std::string> tmpNames;
 				std::map<std::string, std::string> varTypes;
 				std::map<int, std::vector<std::string>> jumpTargets;
+				std::vector<std::string> bufferMethod;
 				
 				int end = code_size + 8;
 				for(int opcodePos = 0;zz < end;zz++)
 				{
 					opcodePos = zz - 8;
-					if(jumpTargets.find(opcodePos) != jumpTargets.end())
-					{
-						for(auto & str : jumpTargets[opcodePos])
-						{
-							W(str);
-						}
-						
-						jumpTargets.erase(opcodePos);
-					}
-					
+					bufferMethod.push_back("/*" + std::to_string(opcodePos) + "*/ ");
 					unsigned char c = ref[zz];
 					switch(c)
 					{
@@ -995,7 +991,7 @@ void ClassFile::generate()
 								jvm_stack.pop_back();
 								std::string arr = jvm_stack.back();
 								jvm_stack.pop_back();
-								W(arr + "[" + index + "] = " + value + ";\n");
+								BUFF(arr + "[" + index + "] = " + value + ";\n");
 							}
 							break;
 						case 0x57: // pop
@@ -1164,11 +1160,28 @@ void ClassFile::generate()
 							{
 								int index = ref[++zz];
 								int byte = ref[++zz];
-								W("i");
-								W(index);
-								W(" += ");
-								W(byte);
-								W(";\n");
+								if(byte < 0)
+								{
+									if(byte == -1)
+									{
+										BUFF("i" + std::to_string(index) + "--;\n");
+									}
+									else
+									{
+										BUFF("i" + std::to_string(index) + " -= " + std::to_string(byte) + ";\n");
+									}
+								}
+								else
+								{
+									if(byte == 1)
+									{
+										BUFF("i" + std::to_string(index) + "++;\n");
+									}
+									else
+									{
+										BUFF("i" + std::to_string(index) + " += " + std::to_string(byte) + ";\n");
+									}
+								}
 							}
 							break;
 						case 0x85: // i2l
@@ -1241,29 +1254,87 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " - " + y);
 							}
 							break;
+						case 0x99: // ifeq
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos;
+								
+								std::string value = jvm_stack.back();
+								jvm_stack.pop_back();
+								
+								if(idx > opcodePos)
+								{
+									BUFF("if(" + value + " != 0) {\n");
+									jumpTargets[idx].push_back("}\n");
+								}
+								else
+								{
+									BUFF("} while(" + value + " != 0);\n");
+									jumpTargets[idx].push_back("do {\n");
+								}
+							}
+							break;
+							// --
+						case 0x9d: // ifgt
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos;
+								
+								std::string value = jvm_stack.back();
+								jvm_stack.pop_back();
+								
+								if(idx > opcodePos)
+								{
+									BUFF("if(" + value + " > 0) {\n");
+									jumpTargets[idx].push_back("}\n");
+								}
+								else
+								{
+									BUFF("} while(" + value + " > 0);\n");
+									jumpTargets[idx].push_back("do {\n");
+								}
+							}
+							break;
 							// --
 						case 0xa2: // if_icmpge
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
-								int idx = ((b1 << 8) + b2) + opcodePos;
-								cout << "DEBUG if: " << ((b1 << 8) + b2) << ", " << opcodePos << " = " << idx << endl;
+								int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos;
 								
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								std::string y = jvm_stack.back();
 								jvm_stack.pop_back();
-								W("if(" + x + " > " + y + ") {\n");
 								
 								// if goto before closing bracket
+								bool hasGoto = false;
+								int idxGoto = 0;
 								unsigned char gotoTarget = ref[idx - 3 + 8];
 								if(gotoTarget == 0xa7)
 								{
-									jumpTargets[idx].push_back("} else {\n");
+									hasGoto = true;
 									unsigned char b1 = ref[idx - 2 + 8];
 									unsigned char b2 = ref[idx - 1 + 8];
-									int idxGoto = ((b1 << 8) + b2) + idx - 3;
-									jumpTargets[idxGoto].push_back("}\n");
+									idxGoto = static_cast<signed short>((b1 << 8) + b2) + idx - 3;
+								}
+								
+								if(hasGoto)
+								{
+									if(idxGoto == opcodePos - 3) // it's a loop
+									{
+										BUFF("while(" + x + " > " + y + ") {\n");
+										jumpTargets[idx].push_back("}\n");
+										// jumpTargets[idxGoto].push_back("}\n");
+									}
+									else // it's an if-else
+									{
+										BUFF("if(" + x + " > " + y + ") {\n");
+										jumpTargets[idx].push_back("} else {\n");
+										// jumpTargets[idxGoto].push_back("}\n");
+									}
 								}
 								else
 								{
@@ -1274,10 +1345,8 @@ void ClassFile::generate()
 							// --
 						case 0xa7: // goto
 							{
-								unsigned char b1 = ref[++zz];
-								unsigned char b2 = ref[++zz];
-								int idx = ((b1 << 8) + b2) + opcodePos;
-								cout << "goto: " << ((b1 << 8) + b2) << ", " << opcodePos << ", " << idx << endl;
+								// goto is not used directly, only checked in conditional opcodes to detect if an "if" is a loop or has an "else"
+								zz += 2;
 							}
 							break;
 							// --
@@ -1286,9 +1355,7 @@ void ClassFile::generate()
 						case 0xae: // freturn
 						case 0xaf: // dreturn
 						case 0xb0: // areturn
-							W("return ");
-							W(jvm_stack.back());
-							W(";\n");
+							BUFF("return " + jvm_stack.back() + ";\n");
 							jvm_stack.pop_back();
 							break;
 						case 0xb1: // return
@@ -1300,7 +1367,7 @@ void ClassFile::generate()
 							*/
 							if(!skip_return)
 							{
-								W("return;\n");
+								BUFF("return;\n");
 							}
 							break;
 						case 0xb2: // getstatic
@@ -1338,7 +1405,7 @@ void ClassFile::generate()
 								
 								std::string tmp = getName(class_index_info.ClassInfo.name_index) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
 								
-								W(tmp);
+								BUFF(tmp);
 								
 								jvm_stack.pop_back();
 							}
@@ -1381,7 +1448,7 @@ void ClassFile::generate()
 								
 								std::string func_call = checkClassName(jvm_stack[jvm_stack.size() - 2]) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
 								
-								W(func_call);
+								BUFF(func_call);
 								
 								jvm_stack.pop_back();
 								jvm_stack.pop_back();
@@ -1475,7 +1542,7 @@ void ClassFile::generate()
 									jvm_stack.push_back(retName);
 								}
 								
-								W(fun_call);
+								BUFF(fun_call);
 							}
 							break;
 						case 0xb8: // invokestatic
@@ -1510,7 +1577,7 @@ void ClassFile::generate()
 								}
 								fun_call += ");\n";
 								
-								W(fun_call);
+								BUFF(fun_call);
 							}
 							break;
 						case 0xb9: // invokeinterface
@@ -1597,7 +1664,7 @@ void ClassFile::generate()
 									jvm_stack.push_back(retName);
 								}
 								
-								W(fun_call);
+								BUFF(fun_call);
 							}
 							break;
 							// --
@@ -1613,7 +1680,7 @@ void ClassFile::generate()
 								
 								if(std::find(tmpNames.begin(), tmpNames.end(), className) == tmpNames.end())
 								{
-									W(className + " tmp" + className + ";\n");
+									BUFF(className + " tmp" + className + ";\n");
 									tmpNames.push_back(className);
 								}
 								
@@ -1629,9 +1696,6 @@ void ClassFile::generate()
 								jvm_stack.pop_back();
 								jvm_stack.push_back("new " + type + "[" + size + "]");
 								varTypes["new " + type + "[" + size + "]"] = type + "[]";
-								// W(type + "[] newArr = new " + type + "[" + size + "];\n");
-								// jvm_stack.push_back("newArr");
-								// varTypes["newArr"] = type + "[]";
 							}
 							break;
 						case 0xbd:
@@ -1667,15 +1731,36 @@ void ClassFile::generate()
 							cerr << "reserved for implementation-dependent operations within debuggers; should not appear in any class file." << endl;
 							break;
 						default:
-							cerr << "Not managed opcode:" << std::hex << static_cast<int>(c) << endl;
-							W("// Not managed opcode: ");
-							W(std::hex << static_cast<int>(c));
-							W("\n");
+							cerr << "Unhandled opcode:" << std::hex << static_cast<int>(c) << endl;
+							BUFF("// Unhandled opcode: " + std::to_string(static_cast<int>(c)) + "\n");
 					}
 					file.flush();
 				}
 				
-				cerr << "JUMPTARGETS SIZE IS " << jumpTargets.size() << endl;
+				for(auto & target : jumpTargets)
+				{
+					auto pos = std::find(bufferMethod.begin(), bufferMethod.end(), "/*" + std::to_string(target.first) + "*/ ");
+					if(pos != bufferMethod.end())
+					{
+						std::string bufferString;
+						for(auto & str : target.second)
+						{
+							bufferString += str;
+						}
+						
+						bufferMethod.insert(pos, bufferString);
+					}
+					else
+					{
+						cerr << "invalid jump target" << endl;
+					}
+				}
+				
+				for(auto & str : bufferMethod)
+				{
+					if(str[0] != '/') // remove the "/*XX*/ " placeholders
+						W(str);
+				}
 			}
 			else
 			{
