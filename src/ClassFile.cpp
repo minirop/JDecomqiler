@@ -524,12 +524,12 @@ std::string ClassFile::getName(std::uint16_t index)
 		\
 		if(idx > opcodePos) \
 		{ \
-			BUFF("if(" + value + " " op " 0) {\n"); \
+			BUFF("if(" + value + " " op ") {\n"); \
 			jumpTargets[idx].push_back("}\n"); \
 		} \
 		else \
 		{ \
-			BUFF("} while(" + value + " " op " 0);\n"); \
+			BUFF("} while(" + value + " " op ");\n"); \
 			jumpTargets[idx].push_back("do {\n"); \
 		} \
 	}
@@ -1318,22 +1318,22 @@ void ClassFile::generate()
 							}
 							break;
 						case 0x99: // ifeq
-							IF_OPCODE("!=")
+							IF_OPCODE("!= 0")
 							break;
 						case 0x9a: // ifne
-							IF_OPCODE("==")
+							IF_OPCODE("== 0")
 							break;
 						case 0x9b: // iflt
-							IF_OPCODE(">=")
+							IF_OPCODE(">= 0")
 							break;
 						case 0x9c: // ifge
-							IF_OPCODE("<")
+							IF_OPCODE("< 0")
 							break;
 						case 0x9d: // ifgt
-							IF_OPCODE("<=")
+							IF_OPCODE("<= 0")
 							break;
 						case 0x9e: // ifle
-							IF_OPCODE(">")
+							IF_OPCODE("> 0")
 							break;
 						case 0x9f: // if_icmpeq
 							IF_OR_LOOP_OPCODE("!=")
@@ -1363,7 +1363,18 @@ void ClassFile::generate()
 							// goto is not used directly, only checked in conditional opcodes to detect if an "if" is a loop or has an "else"
 							zz += 2;
 							break;
-							// --
+						case 0xa8: // jsr
+							// TODO
+							break;
+						case 0xa9: // ret
+							// TODO
+							break;
+						case 0xaa: // tableswitch
+							// TODO
+							break;
+						case 0xab: // lookupswitch
+							// TODO
+							break;
 						case 0xac: // ireturn
 						case 0xad: // lreturn
 						case 0xae: // freturn
@@ -1681,7 +1692,95 @@ void ClassFile::generate()
 								BUFF(fun_call);
 							}
 							break;
-							// --
+						case 0xba: // invokedynamic (check if can be a new)
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_index_info = constant_pool[info.RefInfo.class_index];
+								CPinfo name_and_type_index_info = constant_pool[info.RefInfo.name_and_type_index];
+								
+								std::string cii_name = checkClassName(getName(class_index_info.ClassInfo.name_index));
+								std::string fun_name = getName(name_and_type_index_info.NameAndTypeInfo.name_index);
+								
+								std::vector<std::string> parametres = parseSignature(getName(name_and_type_index_info.NameAndTypeInfo.descriptor_index));
+								std::string returnType = parametres.back();
+								parametres.pop_back(); // remove the return type
+								
+								std::string objectCalledUpon = jvm_stack[jvm_stack.size() - parametres.size() - 1];
+								
+								bool isNewCalled = false;
+								bool isInit = false;
+								
+								if(fun_name == "<init>")
+								{
+									if(isCtor && objectCalledUpon == "this")
+									{
+										// change this = new ParentClass() to this.super()
+										fun_name = "super";
+									}
+									else
+									{
+										isNewCalled = true;
+										fun_name = cii_name;
+									}
+									
+									isInit = true;
+								}
+								
+								std::string fun_call;
+								if(!isInit)
+									fun_call += "((" + varTypes[objectCalledUpon] + ")";
+								fun_call += objectCalledUpon;
+								if(!isInit)
+									fun_call += ")";
+								
+								if(isNewCalled)
+								{
+									fun_call += " = new ";
+								}
+								else
+								{
+									fun_call += ".";
+								}
+								
+								fun_call += fun_name;
+								fun_call += "(";
+								for(std::size_t pp = 0;pp < parametres.size();pp++)
+								{
+									if(pp > 0)
+										fun_call += ", ";
+									
+									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
+								}
+								
+								// <= to remove also the ObjectRef
+								for(std::size_t i = 0;i <= parametres.size();i++)
+								{
+									jvm_stack.pop_back();
+								}
+								fun_call += ");\n";
+								
+								if(returnType != "void")
+								{
+									std::string retName = "ret" + returnType;
+									std::string retNameAndOrType = retName;
+									if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
+									{
+										varTypes[retName] = returnType;
+										retNames.push_back(returnType);
+										
+										retNameAndOrType = returnType + " " + retName;
+									}
+									fun_call = retNameAndOrType + " = " + fun_call;
+									jvm_stack.push_back(retName);
+								}
+								
+								BUFF(fun_call);
+							}
+							break;
 						case 0xbb: // new
 							{
 								unsigned char b1 = ref[++zz];
@@ -1734,6 +1833,13 @@ void ClassFile::generate()
 								jvm_stack.pop_back();
 								jvm_stack.push_back(arr + ".length");
 							}
+							break;
+							// --
+						case 0xc6: // ifnull
+							IF_OPCODE("!= null")
+							break;
+						case 0xc7: // ifnonnull
+							IF_OPCODE("== null")
 							break;
 							// --
 						case 0xca: // breakpoint
