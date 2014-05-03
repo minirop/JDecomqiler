@@ -1100,7 +1100,66 @@ void ClassFile::generate()
 								jvm_stack.push_back("-" + x);
 							}
 							break;
-							//
+						case 0x78: // ishl
+						case 0x79: // lshl
+						case 0x7c: // iushr
+							{
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " << " + y);
+							}
+							break;
+						case 0x7a: // ishr
+						case 0x7b: // lshr
+							{
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " >> " + y);
+							}
+							break;
+						case 0x7d: // lushr
+							{
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " >>> " + y);
+							}
+							break;
+						case 0x7e: // iand
+						case 0x7f: // iand
+							{
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " & " + y);
+							}
+							break;
+						case 0x80: // ior
+						case 0x81: // lor
+							{
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " | " + y);
+							}
+							break;
+						case 0x82: // ixor
+						case 0x83: // lxor
+							{
+								std::string x = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string y = jvm_stack.back();
+								jvm_stack.pop_back();
+								jvm_stack.push_back(x + " | " + y);
+							}
+							break;
 						case 0x84: // iinc
 							{
 								int index = ref[++zz];
@@ -1182,7 +1241,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " - " + y);
 							}
 							break;
-							//
+							// --
 						case 0xa2: // if_icmpge
 							{
 								unsigned char b1 = ref[++zz];
@@ -1212,7 +1271,7 @@ void ClassFile::generate()
 								}
 							}
 							break;
-							//
+							// --
 						case 0xa7: // goto
 							{
 								unsigned char b1 = ref[++zz];
@@ -1221,7 +1280,7 @@ void ClassFile::generate()
 								cout << "goto: " << ((b1 << 8) + b2) << ", " << opcodePos << ", " << idx << endl;
 							}
 							break;
-							//
+							// --
 						case 0xac: // ireturn
 						case 0xad: // lreturn
 						case 0xae: // freturn
@@ -1541,7 +1600,7 @@ void ClassFile::generate()
 								W(fun_call);
 							}
 							break;
-							//
+							// --
 						case 0xbb: // new
 							{
 								unsigned char b1 = ref[++zz];
@@ -1598,7 +1657,11 @@ void ClassFile::generate()
 								jvm_stack.push_back(arr + ".length");
 							}
 							break;
-							//
+							// --
+						case 0xca: // breakpoint
+							cerr << "reserved for breakpoints in Java debuggers; should not appear in any class file." << endl;
+							break;
+						/* 0xcb to 0xdf are reserved for future use */
 						case 0xfe: // impdep1
 						case 0xff: // impdep2
 							cerr << "reserved for implementation-dependent operations within debuggers; should not appear in any class file." << endl;
