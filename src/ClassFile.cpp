@@ -513,6 +513,69 @@ std::string ClassFile::getName(std::uint16_t index)
 		BUFF(buffOutput); \
 	}
 
+#define IF_OPCODE(op) \
+	{ \
+		unsigned char b1 = ref[++zz]; \
+		unsigned char b2 = ref[++zz]; \
+		int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos; \
+		\
+		std::string value = jvm_stack.back(); \
+		jvm_stack.pop_back(); \
+		\
+		if(idx > opcodePos) \
+		{ \
+			BUFF("if(" + value + " " op " 0) {\n"); \
+			jumpTargets[idx].push_back("}\n"); \
+		} \
+		else \
+		{ \
+			BUFF("} while(" + value + " " op " 0);\n"); \
+			jumpTargets[idx].push_back("do {\n"); \
+		} \
+	}
+
+#define IF_OR_LOOP_OPCODE(op) \
+	{ \
+		unsigned char b1 = ref[++zz]; \
+		unsigned char b2 = ref[++zz]; \
+		int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos; \
+		\
+		std::string x = jvm_stack.back(); \
+		jvm_stack.pop_back(); \
+		std::string y = jvm_stack.back(); \
+		jvm_stack.pop_back(); \
+		\
+		bool hasGoto = false; \
+		int idxGoto = 0; \
+		unsigned char gotoTarget = ref[idx - 3 + 8]; \
+		if(gotoTarget == 0xa7) \
+		{ \
+			hasGoto = true; \
+			unsigned char b1 = ref[idx - 2 + 8]; \
+			unsigned char b2 = ref[idx - 1 + 8]; \
+			idxGoto = static_cast<signed short>((b1 << 8) + b2) + idx - 3; \
+		} \
+		\
+		if(hasGoto) \
+		{ \
+			if(idxGoto == opcodePos - 3)\
+			{ \
+				BUFF("while(" + x + " " op " " + y + ") {\n"); \
+				jumpTargets[idx].push_back("}\n"); \
+			} \
+			else \
+			{ \
+				BUFF("if(" + x + " " op " " + y + ") {\n"); \
+				jumpTargets[idx].push_back("} else {\n"); \
+				jumpTargets[idxGoto].push_back("}\n"); \
+			} \
+		} \
+		else \
+		{ \
+			jumpTargets[idx].push_back("}\n"); \
+		} \
+	}
+
 void ClassFile::generate()
 {
 	std::ofstream file("output.java");
@@ -1255,94 +1318,47 @@ void ClassFile::generate()
 							}
 							break;
 						case 0x99: // ifeq
-							{
-								unsigned char b1 = ref[++zz];
-								unsigned char b2 = ref[++zz];
-								int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos;
-								
-								std::string value = jvm_stack.back();
-								jvm_stack.pop_back();
-								
-								if(idx > opcodePos)
-								{
-									BUFF("if(" + value + " != 0) {\n");
-									jumpTargets[idx].push_back("}\n");
-								}
-								else
-								{
-									BUFF("} while(" + value + " != 0);\n");
-									jumpTargets[idx].push_back("do {\n");
-								}
-							}
+							IF_OPCODE("!=")
 							break;
-							// --
+						case 0x9a: // ifne
+							IF_OPCODE("==")
+							break;
+						case 0x9b: // iflt
+							IF_OPCODE(">=")
+							break;
+						case 0x9c: // ifge
+							IF_OPCODE("<")
+							break;
 						case 0x9d: // ifgt
-							{
-								unsigned char b1 = ref[++zz];
-								unsigned char b2 = ref[++zz];
-								int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos;
-								
-								std::string value = jvm_stack.back();
-								jvm_stack.pop_back();
-								
-								if(idx > opcodePos)
-								{
-									BUFF("if(" + value + " > 0) {\n");
-									jumpTargets[idx].push_back("}\n");
-								}
-								else
-								{
-									BUFF("} while(" + value + " > 0);\n");
-									jumpTargets[idx].push_back("do {\n");
-								}
-							}
+							IF_OPCODE("<=")
 							break;
-							// --
+						case 0x9e: // ifle
+							IF_OPCODE(">")
+							break;
+						case 0x9f: // if_icmpeq
+							IF_OR_LOOP_OPCODE("!=")
+							break;
+						case 0xa0: // if_icmpne
+							IF_OR_LOOP_OPCODE("==")
+							break;
+						case 0xa1: // if_icmplt
+							IF_OR_LOOP_OPCODE(">=")
+							break;
 						case 0xa2: // if_icmpge
-							{
-								unsigned char b1 = ref[++zz];
-								unsigned char b2 = ref[++zz];
-								int idx = static_cast<signed short>((b1 << 8) + b2) + opcodePos;
-								
-								std::string x = jvm_stack.back();
-								jvm_stack.pop_back();
-								std::string y = jvm_stack.back();
-								jvm_stack.pop_back();
-								
-								// if goto before closing bracket
-								bool hasGoto = false;
-								int idxGoto = 0;
-								unsigned char gotoTarget = ref[idx - 3 + 8];
-								if(gotoTarget == 0xa7)
-								{
-									hasGoto = true;
-									unsigned char b1 = ref[idx - 2 + 8];
-									unsigned char b2 = ref[idx - 1 + 8];
-									idxGoto = static_cast<signed short>((b1 << 8) + b2) + idx - 3;
-								}
-								
-								if(hasGoto)
-								{
-									if(idxGoto == opcodePos - 3) // it's a loop
-									{
-										BUFF("while(" + x + " > " + y + ") {\n");
-										jumpTargets[idx].push_back("}\n");
-										// jumpTargets[idxGoto].push_back("}\n");
-									}
-									else // it's an if-else
-									{
-										BUFF("if(" + x + " > " + y + ") {\n");
-										jumpTargets[idx].push_back("} else {\n");
-										// jumpTargets[idxGoto].push_back("}\n");
-									}
-								}
-								else
-								{
-									jumpTargets[idx].push_back("}\n");
-								}
-							}
+							IF_OR_LOOP_OPCODE("<")
 							break;
-							// --
+						case 0xa3: // if_icmpgt
+							IF_OR_LOOP_OPCODE("<=")
+							break;
+						case 0xa4: // if_icmple
+							IF_OR_LOOP_OPCODE(">")
+							break;
+						case 0xa5: // if_acmpeq
+							IF_OR_LOOP_OPCODE("!=")
+							break;
+						case 0xa6: // if_acmpne
+							IF_OR_LOOP_OPCODE("==")
+							break;
 						case 0xa7: // goto
 							{
 								// goto is not used directly, only checked in conditional opcodes to detect if an "if" is a loop or has an "else"
