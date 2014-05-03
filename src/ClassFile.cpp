@@ -1360,10 +1360,8 @@ void ClassFile::generate()
 							IF_OR_LOOP_OPCODE("==")
 							break;
 						case 0xa7: // goto
-							{
-								// goto is not used directly, only checked in conditional opcodes to detect if an "if" is a loop or has an "else"
-								zz += 2;
-							}
+							// goto is not used directly, only checked in conditional opcodes to detect if an "if" is a loop or has an "else"
+							zz += 2;
 							break;
 							// --
 						case 0xac: // ireturn
