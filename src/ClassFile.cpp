@@ -469,6 +469,11 @@ std::string ClassFile::parseType(std::string signature, int & i)
 			} while(signature[i] != ';');
 			tmp.pop_back();
 			break;
+		case '[':
+			i++;
+			tmp = parseType(signature, i);
+			tmp += "[]";
+			break;
 		default:
 			cerr << "unrecognized parameter '" << signature[i] << "' type in signature" << endl;
 			exit(1);
@@ -717,6 +722,7 @@ void ClassFile::generate()
 				{
 					opcodePos = zz - 8;
 					bufferMethod.push_back("/*" + std::to_string(opcodePos) + "*/ ");
+					
 					unsigned char c = ref[zz];
 					switch(c)
 					{
@@ -955,8 +961,7 @@ void ClassFile::generate()
 								int index = ref[++zz];
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], varName, index)
-								// STORE("Object", varName, index)
-								// varTypes["a" + std::to_string(index)] = varTypes[varName];
+								varTypes["a" + std::to_string(index)] = varTypes[varName];
 							}
 							break;
 						case 0x3b: // istore_0
@@ -1011,32 +1016,28 @@ void ClassFile::generate()
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 0)
-								// STORE("Object", jvm_stack.back(), 0)
-								// varTypes["a0"] = varTypes[varName];
+								varTypes["a0"] = varTypes[varName];
 							}
 							break;
 						case 0x4c: // astore_1
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 1)
-								// STORE("Object", jvm_stack.back(), 1)
-								// varTypes["a1"] = varTypes[varName];
+								varTypes["a1"] = varTypes[varName];
 							}
 							break;
 						case 0x4d: // astore_2
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 2)
-								// STORE("Object", jvm_stack.back(), 2)
-								// varTypes["a2"] = varTypes[varName];
+								varTypes["a2"] = varTypes[varName];
 							}
 							break;
 						case 0x4e: // astore_3
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 3)
-								// STORE("Object", jvm_stack.back(), 3)
-								// varTypes["a3"] = varTypes[varName];
+								varTypes["a3"] = varTypes[varName];
 							}
 							break;
 						case 0x4f: // iastore
@@ -1435,21 +1436,17 @@ void ClassFile::generate()
 							break;
 						case 0xa9: // ret
 							{
-								unsigned char b1 = ref[++zz];
+								unsigned char i = ref[++zz];
 								cout << "RET to addr of local addr " << i << endl;
 							}
 							break;
 						case 0xaa: // tableswitch
-							{
-								// TODO
-								cerr << "tableswitch not implemented, segfault incoming." << endl;
-							}
+							// TODO
+							cerr << "tableswitch not implemented, segfault incoming." << endl;
 							break;
 						case 0xab: // lookupswitch
-							{
-								// TODO
-								cerr << "lookupswitch not implemented, segfault incoming." << endl;
-							}
+							// TODO
+							cerr << "lookupswitch not implemented, segfault incoming." << endl;
 							break;
 						case 0xac: // ireturn
 						case 0xad: // lreturn
@@ -1925,6 +1922,12 @@ void ClassFile::generate()
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
 								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_name = constant_pool[info.ClassInfo.name_index];
+								std::string className = checkClassName(class_name.UTF8Info.bytes);
+								
+								cout << "checkcast " << jvm_stack.back() << " is a " << className << endl;
 							}
 							break;
 						case 0xc1: // instanceof
@@ -1943,20 +1946,63 @@ void ClassFile::generate()
 							}
 							break;
 						case 0xc2: // monitorenter
-							// TODO
-							cerr << "monitorenter not implemented." << endl;
+							{
+								std::string obj = jvm_stack.back();
+								jvm_stack.pop_back();
+								BUFF("synchronized(" + obj + ") {\n");
+							}
 							break;
 						case 0xc3: // monitorexit
-							// TODO
-							cerr << "monitorexit not implemented." << endl;
+							{
+								BUFF("}\n");
+								unsigned char nextOpcode = ref[zz + 1];
+								
+								if(nextOpcode == 0xa7) // goto
+								{
+									unsigned char b1 = ref[zz+2];
+									unsigned char b2 = ref[zz+3];
+									int gotoTarget = static_cast<signed short>((b1 << 8) + b2) + opcodePos + 1;
+									while(zz < gotoTarget + 8 - 1)
+									{
+										zz++;
+									}
+								}
+							}
 							break;
 						case 0xc4: // wide
 							// TODO
-							cerr << "wide not implemented." << endl;
+							cerr << "wide not implemented, segfault incoming." << endl;
 							break;
 						case 0xc5: // multianewarray
-							// TODO
-							cerr << "multianewarray not implemented." << endl;
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int dimension = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_name = constant_pool[info.ClassInfo.name_index];
+								std::string className = checkClassName(class_name.UTF8Info.bytes);
+								
+								int p = 0;
+								std::string outputType = parseType(className, p);
+								std::string type = outputType;
+								auto it = std::find(type.begin(), type.end(), '[');
+								type.erase(it, type.end());
+								
+								std::string dimensions;
+								while(dimension > 0)
+								{
+									std::string size = jvm_stack.back();
+									jvm_stack.pop_back();
+									dimensions = "[" + size + "]" + dimensions;
+									dimension--;
+								}
+								std::string newType = "new " + type + dimensions;
+								
+								jvm_stack.push_back(newType);
+								varTypes[newType] = outputType;
+							}
 							break;
 						case 0xc6: // ifnull
 							IF_OPCODE("!= null")
@@ -1966,11 +2012,11 @@ void ClassFile::generate()
 							break;
 						case 0xc8: // goto_w
 							// TODO
-							cerr << "goto_w not implemented." << endl;
+							cerr << "goto_w not implemented, segfault incoming." << endl;
 							break;
 						case 0xc9: // jsr_w
 							// TODO
-							cerr << "jsr_w not implemented." << endl;
+							cerr << "jsr_w not implemented, segfault incoming." << endl;
 							break;
 						case 0xca: // breakpoint
 							cerr << "reserved for breakpoints in Java debuggers; should not appear in any class file." << endl;
