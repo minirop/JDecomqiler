@@ -1984,7 +1984,6 @@ void ClassFile::generate()
 							cerr << "Unhandled opcode:" << std::hex << static_cast<int>(c) << endl;
 							BUFF("// Unhandled opcode: " + std::to_string(static_cast<int>(c)) + "\n");
 					}
-					file.flush();
 				}
 				
 				for(auto & target : jumpTargets)
