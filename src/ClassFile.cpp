@@ -24,6 +24,7 @@ freely, subject to the following restrictions:
 */
 #include "ClassFile.h"
 #include "defines.h"
+#include "opcodes.h"
 #include <iostream>
 #include <algorithm>
 
@@ -726,61 +727,61 @@ void ClassFile::generate()
 					unsigned char c = ref[zz];
 					switch(c)
 					{
-						case 0x00: // nop
+						case OP_nop:
 							// skip
 							break;
-						case 0x01: // aconst_null
+						case OP_aconst_null:
 							jvm_stack.push_back("null");
 							break;
-						case 0x02: // iconst_m1
+						case OP_iconst_m1:
 							jvm_stack.push_back("-1");
 							break;
-						case 0x03: // iconst_0
+						case OP_iconst_0:
 							jvm_stack.push_back("0");
 							break;
-						case 0x04: // iconst_1
+						case OP_iconst_1:
 							jvm_stack.push_back("1");
 							break;
-						case 0x05: // iconst_2
+						case OP_iconst_2:
 							jvm_stack.push_back("2");
 							break;
-						case 0x06: // iconst_3
+						case OP_iconst_3:
 							jvm_stack.push_back("3");
 							break;
-						case 0x07: // iconst_4
+						case OP_iconst_4:
 							jvm_stack.push_back("4");
 							break;
-						case 0x08: // iconst_5
+						case OP_iconst_5:
 							jvm_stack.push_back("5");
 							break;
-						case 0x09: // lconst_0
+						case OP_lconst_0:
 							jvm_stack.push_back("0L");
 							break;
-						case 0x0a: // lconst_1
+						case OP_lconst_1:
 							jvm_stack.push_back("1L");
 							break;
-						case 0x0b: // fconst_0
+						case OP_fconst_0:
 							jvm_stack.push_back("0.0f");
 							break;
-						case 0x0c: // fconst_1
+						case OP_fconst_1:
 							jvm_stack.push_back("1.0f");
 							break;
-						case 0x0d: // fconst_2
+						case OP_fconst_2:
 							jvm_stack.push_back("2.0f");
 							break;
-						case 0x0e: // dconst_0
+						case OP_dconst_0:
 							jvm_stack.push_back("0.0");
 							break;
-						case 0x0f: // dconst_1
+						case OP_dconst_1:
 							jvm_stack.push_back("1.0");
 							break;
-						case 0x10: // bipush
+						case OP_bipush:
 							{
 								int idx = ref[++zz];
 								jvm_stack.push_back(std::to_string(idx));
 							}
 							break;
-						case 0x11: // sipush
+						case OP_sipush:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -788,7 +789,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(std::to_string(idx));
 							}
 							break;
-						case 0x12: // ldc
+						case OP_ldc:
 							{
 								int idx = ref[++zz];
 								switch(constant_pool[idx].tag)
@@ -806,8 +807,8 @@ void ClassFile::generate()
 								}
 							}
 							break;
-						case 0x13: // ldc_w
-						case 0x14: // ldc2_w
+						case OP_ldc_w:
+						case OP_ldc2_w:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -823,107 +824,107 @@ void ClassFile::generate()
 								}
 							}
 							break;
-						case 0x15: // iload
+						case OP_iload:
 							{
 								int idx = ref[++zz];
 								jvm_stack.push_back(std::string("i") + std::to_string(idx));
 							}
 							break;
-						case 0x16: // lload
+						case OP_lload:
 							{
 								int idx = ref[++zz];
 								jvm_stack.push_back(std::string("l") + std::to_string(idx));
 							}
 							break;
-						case 0x17: // fload
+						case OP_fload:
 							{
 								int idx = ref[++zz];
 								jvm_stack.push_back(std::string("f") + std::to_string(idx));
 							}
 							break;
-						case 0x18: // dload
+						case OP_dload:
 							{
 								int idx = ref[++zz];
 								jvm_stack.push_back(std::string("d") + std::to_string(idx));
 							}
 							break;
-						case 0x19: // aload
+						case OP_aload:
 							{
 								int idx = ref[++zz];
 								jvm_stack.push_back(std::string("a") + std::to_string(idx));
 							}
 							break;
-						case 0x1a: // iload_0
+						case OP_iload_0:
 							jvm_stack.push_back("i0");
 							break;
-						case 0x1b: // iload_1
+						case OP_iload_1:
 							jvm_stack.push_back("i1");
 							break;
-						case 0x1c: // iload_2
+						case OP_iload_2:
 							jvm_stack.push_back("i2");
 							break;
-						case 0x1d: // iload_3
+						case OP_iload_3:
 							jvm_stack.push_back("i3");
 							break;
-						case 0x1e: // lload_0
+						case OP_lload_0:
 							jvm_stack.push_back("l0");
 							break;
-						case 0x1f: // lload_1
+						case OP_lload_1:
 							jvm_stack.push_back("l1");
 							break;
-						case 0x20: // lload_2
+						case OP_lload_2:
 							jvm_stack.push_back("l2");
 							break;
-						case 0x21: // lload_3
+						case OP_lload_3:
 							jvm_stack.push_back("l3");
 							break;
-						case 0x22: // fload_0
+						case OP_fload_0:
 							jvm_stack.push_back("f0");
 							break;
-						case 0x23: // fload_1
+						case OP_fload_1:
 							jvm_stack.push_back("f1");
 							break;
-						case 0x24: // fload_2
+						case OP_fload_2:
 							jvm_stack.push_back("f2");
 							break;
-						case 0x25: // fload_3
+						case OP_fload_3:
 							jvm_stack.push_back("f3");
 							break;
-						case 0x26: // dload_0
+						case OP_dload_0:
 							jvm_stack.push_back("d0");
 							break;
-						case 0x27: // dload_1
+						case OP_dload_1:
 							jvm_stack.push_back("d1");
 							break;
-						case 0x28: // dload_2
+						case OP_dload_2:
 							jvm_stack.push_back("d2");
 							break;
-						case 0x29: // dload_3
+						case OP_dload_3:
 							jvm_stack.push_back("d3");
 							break;
-						case 0x2a: // aload_0
+						case OP_aload_0:
 							if(m.isStatic)
 								jvm_stack.push_back("a0");
 							else
 								jvm_stack.push_back("this");
 							break;
-						case 0x2b: // aload_1
+						case OP_aload_1:
 							jvm_stack.push_back("a1");
 							break;
-						case 0x2c: // aload_2
+						case OP_aload_2:
 							jvm_stack.push_back("a2");
 							break;
-						case 0x2d: // aload_3
+						case OP_aload_3:
 							jvm_stack.push_back("a3");
 							break;
-						case 0x2e: // iaload
-						case 0x2f: // laload
-						case 0x30: // faload
-						case 0x31: // daload
-						case 0x32: // aaload
-						case 0x33: // baload
-						case 0x34: // caload
-						case 0x35: // saload
+						case OP_iaload:
+						case OP_laload:
+						case OP_faload:
+						case OP_daload:
+						case OP_aaload:
+						case OP_baload:
+						case OP_caload:
+						case OP_saload:
 							{
 								std::string index = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -932,31 +933,31 @@ void ClassFile::generate()
 								jvm_stack.push_back(arr + "[" + index + "]");
 							}
 							break;
-						case 0x36: // istore
+						case OP_istore:
 							{
 								int index = ref[++zz];
 								STORE("int", jvm_stack.back(), index)
 							}
 							break;
-						case 0x37: // lstore
+						case OP_lstore:
 							{
 								int index = ref[++zz];
 								STORE("long", jvm_stack.back(), index)
 							}
 							break;
-						case 0x38: // fstore
+						case OP_fstore:
 							{
 								int index = ref[++zz];
 								STORE("float", jvm_stack.back(), index)
 							}
 							break;
-						case 0x39: // dstore
+						case OP_dstore:
 							{
 								int index = ref[++zz];
 								STORE("double", jvm_stack.back(), index)
 							}
 							break;
-						case 0x3a: // astore
+						case OP_astore:
 							{
 								int index = ref[++zz];
 								std::string varName = jvm_stack.back();
@@ -964,90 +965,90 @@ void ClassFile::generate()
 								varTypes["a" + std::to_string(index)] = varTypes[varName];
 							}
 							break;
-						case 0x3b: // istore_0
+						case OP_istore_0:
 							STORE("int", jvm_stack.back(), 0)
 							break;
-						case 0x3c: // istore_1
+						case OP_istore_1:
 							STORE("int", jvm_stack.back(), 1)
 							break;
-						case 0x3d: // istore_2
+						case OP_istore_2:
 							STORE("int", jvm_stack.back(), 2)
 							break;
-						case 0x3e: // istore_3
+						case OP_istore_3:
 							STORE("int", jvm_stack.back(), 3)
 							break;
-						case 0x3f: // lstore_0
+						case OP_lstore_0:
 							STORE("long", jvm_stack.back(), 0)
 							break;
-						case 0x40: // lstore_1
+						case OP_lstore_1:
 							STORE("long", jvm_stack.back(), 1)
 							break;
-						case 0x41: // lstore_2
+						case OP_lstore_2:
 							STORE("long", jvm_stack.back(), 2)
 							break;
-						case 0x42: // lstore_3
+						case OP_lstore_3:
 							STORE("long", jvm_stack.back(), 3)
 							break;
-						case 0x43: // fstore_0
+						case OP_fstore_0:
 							STORE("float", jvm_stack.back(), 0)
 							break;
-						case 0x44: // fstore_1
+						case OP_fstore_1:
 							STORE("float", jvm_stack.back(), 1)
 							break;
-						case 0x45: // fstore_2
+						case OP_fstore_2:
 							STORE("float", jvm_stack.back(), 2)
 							break;
-						case 0x46: // fstore_3
+						case OP_fstore_3:
 							STORE("float", jvm_stack.back(), 3)
 							break;
-						case 0x47: // dstore_0
+						case OP_dstore_0:
 							STORE("double", jvm_stack.back(), 0)
 							break;
-						case 0x48: // dstore_1
+						case OP_dstore_1:
 							STORE("double", jvm_stack.back(), 1)
 							break;
-						case 0x49: // dstore_2
+						case OP_dstore_2:
 							STORE("double", jvm_stack.back(), 2)
 							break;
-						case 0x4a: // dstore_3
+						case OP_dstore_3:
 							STORE("double", jvm_stack.back(), 3)
 							break;
-						case 0x4b: // astore_0
+						case OP_astore_0:
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 0)
 								varTypes["a0"] = varTypes[varName];
 							}
 							break;
-						case 0x4c: // astore_1
+						case OP_astore_1:
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 1)
 								varTypes["a1"] = varTypes[varName];
 							}
 							break;
-						case 0x4d: // astore_2
+						case OP_astore_2:
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 2)
 								varTypes["a2"] = varTypes[varName];
 							}
 							break;
-						case 0x4e: // astore_3
+						case OP_astore_3:
 							{
 								std::string varName = jvm_stack.back();
 								STORE(varTypes[varName], jvm_stack.back(), 3)
 								varTypes["a3"] = varTypes[varName];
 							}
 							break;
-						case 0x4f: // iastore
-						case 0x50: // lastore
-						case 0x51: // fastore
-						case 0x52: // dastore
-						case 0x53: // aastore
-						case 0x54: // bastore
-						case 0x55: // castore
-						case 0x56: // sastore
+						case OP_iastore:
+						case OP_lastore:
+						case OP_fastore:
+						case OP_dastore:
+						case OP_aastore:
+						case OP_bastore:
+						case OP_castore:
+						case OP_sastore:
 							{
 								std::string value = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1058,14 +1059,14 @@ void ClassFile::generate()
 								BUFF(arr + "[" + index + "] = " + value + ";\n");
 							}
 							break;
-						case 0x57: // pop
-						case 0x58: // pop2 -- since we don't treat double as 2 values
+						case OP_pop:
+						case OP_pop2: // since we don't treat double as 2 values
 							jvm_stack.pop_back();
 							break;
-						case 0x59: // dup
+						case OP_dup:
 							jvm_stack.push_back(jvm_stack.back());
 							break;
-						case 0x5a: // dup_x1
+						case OP_dup_x1:
 							{
 								std::string value1 = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1077,7 +1078,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(value1);
 							}
 							break;
-						case 0x5b: // dup_x2
+						case OP_dup_x2:
 							{
 								std::string value1 = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1092,7 +1093,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(value1);
 							}
 							break;
-						case 0x5c: // dup2
+						case OP_dup2:
 							{
 								std::string value1 = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1105,7 +1106,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(value1);
 							}
 							break;
-						case 0x5d: // dup2_x1
+						case OP_dup2_x1:
 							{
 								std::string value1 = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1121,7 +1122,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(value1);
 							}
 							break;
-						case 0x5e: // dup2_x2
+						case OP_dup2_x2:
 							{
 								std::string value1 = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1140,7 +1141,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(value1);
 							}
 							break;
-						case 0x5f: // swap
+						case OP_swap:
 							{
 								std::string first = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1150,10 +1151,10 @@ void ClassFile::generate()
 								jvm_stack.push_back(second);
 							}
 							break;
-						case 0x60: // iadd
-						case 0x61: // ladd
-						case 0x62: // fadd
-						case 0x63: // dadd
+						case OP_iadd:
+						case OP_ladd:
+						case OP_fadd:
+						case OP_dadd:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1162,10 +1163,10 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " + " + y);
 							}
 							break;
-						case 0x64: // isub
-						case 0x65: // lsub
-						case 0x66: // fsub
-						case 0x67: // dsub
+						case OP_isub:
+						case OP_lsub:
+						case OP_fsub:
+						case OP_dsub:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1174,10 +1175,10 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " - " + y);
 							}
 							break;
-						case 0x68: // imul
-						case 0x69: // lmul
-						case 0x6a: // fmul
-						case 0x6b: // dmul
+						case OP_imul:
+						case OP_lmul:
+						case OP_fmul:
+						case OP_dmul:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1186,10 +1187,10 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " * " + y);
 							}
 							break;
-						case 0x6c: // idiv
-						case 0x6d: // ldiv
-						case 0x6e: // fdiv
-						case 0x6f: // ddiv
+						case OP_idiv:
+						case OP_ldiv:
+						case OP_fdiv:
+						case OP_ddiv:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1198,10 +1199,10 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " * " + y);
 							}
 							break;
-						case 0x70: // irem
-						case 0x71: // lrem
-						case 0x72: // frem
-						case 0x73: // drem
+						case OP_irem:
+						case OP_lrem:
+						case OP_frem:
+						case OP_drem:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1210,19 +1211,19 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " % " + y);
 							}
 							break;
-						case 0x74: // ineg
-						case 0x75: // lneg
-						case 0x76: // fneg
-						case 0x77: // dneg
+						case OP_ineg:
+						case OP_lneg:
+						case OP_fneg:
+						case OP_dneg:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("-" + x);
 							}
 							break;
-						case 0x78: // ishl
-						case 0x79: // lshl
-						case 0x7c: // iushr
+						case OP_ishl:
+						case OP_lshl:
+						case OP_iushr:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1231,8 +1232,8 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " << " + y);
 							}
 							break;
-						case 0x7a: // ishr
-						case 0x7b: // lshr
+						case OP_ishr:
+						case OP_lshr:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1241,7 +1242,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " >> " + y);
 							}
 							break;
-						case 0x7d: // lushr
+						case OP_lushr:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1250,8 +1251,8 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " >>> " + y);
 							}
 							break;
-						case 0x7e: // iand
-						case 0x7f: // iand
+						case OP_iand:
+						case OP_land:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1260,8 +1261,8 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " & " + y);
 							}
 							break;
-						case 0x80: // ior
-						case 0x81: // lor
+						case OP_ior:
+						case OP_lor:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1270,8 +1271,8 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " | " + y);
 							}
 							break;
-						case 0x82: // ixor
-						case 0x83: // lxor
+						case OP_ixor:
+						case OP_lxor:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1280,7 +1281,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " | " + y);
 							}
 							break;
-						case 0x84: // iinc
+						case OP_iinc:
 							{
 								int index = ref[++zz];
 								int byte = ref[++zz];
@@ -1308,68 +1309,68 @@ void ClassFile::generate()
 								}
 							}
 							break;
-						case 0x85: // i2l
-						case 0x8c: // f2l
-						case 0x8f: // d2l
+						case OP_i2l:
+						case OP_f2l:
+						case OP_d2l:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("(long)" + x);
 							}
 							break;
-						case 0x86: // i2f
-						case 0x89: // l2f
-						case 0x90: // d2f
+						case OP_i2f:
+						case OP_l2f:
+						case OP_d2f:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("(float)" + x);
 							}
 							break;
-						case 0x87: // i2d
-						case 0x8a: // l2d
-						case 0x8d: // f2d
+						case OP_i2d:
+						case OP_l2d:
+						case OP_f2d:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("(double)" + x);
 							}
 							break;
-						case 0x88: // l2i
-						case 0x8b: // f2i
-						case 0x8e: // d2i
+						case OP_l2i:
+						case OP_f2i:
+						case OP_d2i:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("(int)" + x);
 							}
 							break;
-						case 0x91: // i2b
+						case OP_i2b:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("(byte)" + x);
 							}
 							break;
-						case 0x92: // i2c
+						case OP_i2c:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("(char)" + x);
 							}
 							break;
-						case 0x93: // i2s
+						case OP_i2s:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back("(short)" + x);
 							}
 							break;
-						case 0x94: // lcmp
-						case 0x95: // fcmpl
-						case 0x96: // fcmpg
-						case 0x97: // dcmpl
-						case 0x98: // dcmpg
+						case OP_lcmp:
+						case OP_fcmpl:
+						case OP_fcmpg:
+						case OP_dcmpl:
+						case OP_dcmpg:
 							{
 								std::string x = jvm_stack.back();
 								jvm_stack.pop_back();
@@ -1378,53 +1379,53 @@ void ClassFile::generate()
 								jvm_stack.push_back(x + " - " + y);
 							}
 							break;
-						case 0x99: // ifeq
+						case OP_ifeq:
 							IF_OPCODE("!= 0")
 							break;
-						case 0x9a: // ifne
+						case OP_ifne:
 							IF_OPCODE("== 0")
 							break;
-						case 0x9b: // iflt
+						case OP_iflt:
 							IF_OPCODE(">= 0")
 							break;
-						case 0x9c: // ifge
+						case OP_ifge:
 							IF_OPCODE("< 0")
 							break;
-						case 0x9d: // ifgt
+						case OP_ifgt:
 							IF_OPCODE("<= 0")
 							break;
-						case 0x9e: // ifle
+						case OP_ifle:
 							IF_OPCODE("> 0")
 							break;
-						case 0x9f: // if_icmpeq
+						case OP_if_icmpeq:
 							IF_OR_LOOP_OPCODE("!=")
 							break;
-						case 0xa0: // if_icmpne
+						case OP_if_icmpne:
 							IF_OR_LOOP_OPCODE("==")
 							break;
-						case 0xa1: // if_icmplt
+						case OP_if_icmplt:
 							IF_OR_LOOP_OPCODE(">=")
 							break;
-						case 0xa2: // if_icmpge
+						case OP_if_icmpge:
 							IF_OR_LOOP_OPCODE("<")
 							break;
-						case 0xa3: // if_icmpgt
+						case OP_if_icmpgt:
 							IF_OR_LOOP_OPCODE("<=")
 							break;
-						case 0xa4: // if_icmple
+						case OP_if_icmple:
 							IF_OR_LOOP_OPCODE(">")
 							break;
-						case 0xa5: // if_acmpeq
+						case OP_if_acmpeq:
 							IF_OR_LOOP_OPCODE("!=")
 							break;
-						case 0xa6: // if_acmpne
+						case OP_if_acmpne:
 							IF_OR_LOOP_OPCODE("==")
 							break;
-						case 0xa7: // goto
+						case OP_goto:
 							// goto is not used directly, only checked in conditional opcodes to detect if an "if" is a loop or has an "else"
 							zz += 2;
 							break;
-						case 0xa8: // jsr
+						case OP_jsr:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1434,29 +1435,29 @@ void ClassFile::generate()
 								jvm_stack.push_back("/* ret addr: " + std::to_string(opcodePos) + " */");
 							}
 							break;
-						case 0xa9: // ret
+						case OP_ret:
 							{
 								unsigned char i = ref[++zz];
 								cout << "RET to addr of local addr " << i << endl;
 							}
 							break;
-						case 0xaa: // tableswitch
+						case OP_tableswitch:
 							// TODO
 							cerr << "tableswitch not implemented, segfault incoming." << endl;
 							break;
-						case 0xab: // lookupswitch
+						case OP_lookupswitch:
 							// TODO
 							cerr << "lookupswitch not implemented, segfault incoming." << endl;
 							break;
-						case 0xac: // ireturn
-						case 0xad: // lreturn
-						case 0xae: // freturn
-						case 0xaf: // dreturn
-						case 0xb0: // areturn
+						case OP_ireturn:
+						case OP_lreturn:
+						case OP_freturn:
+						case OP_dreturn:
+						case OP_areturn:
 							BUFF("return " + jvm_stack.back() + ";\n");
 							jvm_stack.pop_back();
 							break;
-						case 0xb1: // return
+						case OP_return:
 							jvm_stack.clear();
 							/*
 							static { i = 3; } gets a "return" opcode,
@@ -1468,7 +1469,7 @@ void ClassFile::generate()
 								BUFF("return;\n");
 							}
 							break;
-						case 0xb2: // getstatic
+						case OP_getstatic:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1486,7 +1487,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(func_call);
 							}
 							break;
-						case 0xb3: // putstatic
+						case OP_putstatic:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1508,7 +1509,7 @@ void ClassFile::generate()
 								jvm_stack.pop_back();
 							}
 							break;
-						case 0xb4: // getfield
+						case OP_getfield:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1529,7 +1530,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(tmp);
 							}
 							break;
-						case 0xb5: // putfield
+						case OP_putfield:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1552,8 +1553,8 @@ void ClassFile::generate()
 								jvm_stack.pop_back();
 							}
 							break;
-						case 0xb6: // invokevirtual
-						case 0xb7: // invokespecial
+						case OP_invokevirtual:
+						case OP_invokespecial:
 							{
 								bool invokevirtual = (c == 0xb6);
 								unsigned char b1 = ref[++zz];
@@ -1643,7 +1644,7 @@ void ClassFile::generate()
 								BUFF(fun_call);
 							}
 							break;
-						case 0xb8: // invokestatic
+						case OP_invokestatic:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1678,7 +1679,7 @@ void ClassFile::generate()
 								BUFF(fun_call);
 							}
 							break;
-						case 0xb9: // invokeinterface
+						case OP_invokeinterface:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1765,7 +1766,7 @@ void ClassFile::generate()
 								BUFF(fun_call);
 							}
 							break;
-						case 0xba: // invokedynamic (check if can be a new)
+						case OP_invokedynamic: // (check if can be a new)
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1854,7 +1855,7 @@ void ClassFile::generate()
 								BUFF(fun_call);
 							}
 							break;
-						case 0xbb: // new
+						case OP_new:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1874,7 +1875,7 @@ void ClassFile::generate()
 								varTypes["tmp" + className] = className;
 							}
 							break;
-						case 0xbc: // newarray
+						case OP_newarray:
 							{
 								int typeId = ref[++zz];
 								std::string type = typeFromInt(typeId);
@@ -1884,7 +1885,7 @@ void ClassFile::generate()
 								varTypes["new " + type + "[" + size + "]"] = type + "[]";
 							}
 							break;
-						case 0xbd: // anewarray
+						case OP_anewarray:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1900,14 +1901,14 @@ void ClassFile::generate()
 								varTypes["new " + className + "[" + size + "]"] = className + "[]";
 							}
 							break;
-						case 0xbe: // arraylength
+						case OP_arraylength:
 							{
 								std::string arr = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back(arr + ".length");
 							}
 							break;
-						case 0xbf: // athrow
+						case OP_athrow:
 							{
 								// TODO
 								cerr << "athrow not implemented." << endl;
@@ -1916,7 +1917,7 @@ void ClassFile::generate()
 								jvm_stack.push_back(exception);
 							}
 							break;
-						case 0xc0: // checkcast
+						case OP_checkcast:
 							{
 								// TODO
 								unsigned char b1 = ref[++zz];
@@ -1930,7 +1931,7 @@ void ClassFile::generate()
 								cout << "checkcast " << jvm_stack.back() << " is a " << className << endl;
 							}
 							break;
-						case 0xc1: // instanceof
+						case OP_instanceof:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1945,14 +1946,14 @@ void ClassFile::generate()
 								jvm_stack.push_back(obj + "instanceof" + className);
 							}
 							break;
-						case 0xc2: // monitorenter
+						case OP_monitorenter:
 							{
 								std::string obj = jvm_stack.back();
 								jvm_stack.pop_back();
 								BUFF("synchronized(" + obj + ") {\n");
 							}
 							break;
-						case 0xc3: // monitorexit
+						case OP_monitorexit:
 							{
 								BUFF("}\n");
 								unsigned char nextOpcode = ref[zz + 1];
@@ -1969,11 +1970,11 @@ void ClassFile::generate()
 								}
 							}
 							break;
-						case 0xc4: // wide
+						case OP_wide:
 							// TODO
 							cerr << "wide not implemented, segfault incoming." << endl;
 							break;
-						case 0xc5: // multianewarray
+						case OP_multianewarray:
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -2004,26 +2005,26 @@ void ClassFile::generate()
 								varTypes[newType] = outputType;
 							}
 							break;
-						case 0xc6: // ifnull
+						case OP_ifnull:
 							IF_OPCODE("!= null")
 							break;
-						case 0xc7: // ifnonnull
+						case OP_ifnonnull:
 							IF_OPCODE("== null")
 							break;
-						case 0xc8: // goto_w
+						case OP_goto_w:
 							// TODO
 							cerr << "goto_w not implemented, segfault incoming." << endl;
 							break;
-						case 0xc9: // jsr_w
+						case OP_jsr_w:
 							// TODO
 							cerr << "jsr_w not implemented, segfault incoming." << endl;
 							break;
-						case 0xca: // breakpoint
+						case OP_breakpoint:
 							cerr << "reserved for breakpoints in Java debuggers; should not appear in any class file." << endl;
 							break;
 						/* 0xcb to 0xdf are reserved for future use */
-						case 0xfe: // impdep1
-						case 0xff: // impdep2
+						case OP_impdep1:
+						case OP_impdep2:
 							cerr << "reserved for implementation-dependent operations within debuggers; should not appear in any class file." << endl;
 							break;
 						default:
