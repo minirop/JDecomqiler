@@ -1424,16 +1424,32 @@ void ClassFile::generate()
 							zz += 2;
 							break;
 						case 0xa8: // jsr
-							// TODO
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = static_cast<signed short>((b1 << 8) + b2);
+								
+								BUFF("// jsr jump to: " + std::to_string(idx) + "\n");
+								jvm_stack.push_back("/* ret addr: " + std::to_string(opcodePos) + " */");
+							}
 							break;
 						case 0xa9: // ret
-							// TODO
+							{
+								unsigned char b1 = ref[++zz];
+								cout << "RET to addr of local addr " << i << endl;
+							}
 							break;
 						case 0xaa: // tableswitch
-							// TODO
+							{
+								// TODO
+								cerr << "tableswitch not implemented, segfault incoming." << endl;
+							}
 							break;
 						case 0xab: // lookupswitch
-							// TODO
+							{
+								// TODO
+								cerr << "lookupswitch not implemented, segfault incoming." << endl;
+							}
 							break;
 						case 0xac: // ireturn
 						case 0xad: // lreturn
@@ -1871,7 +1887,7 @@ void ClassFile::generate()
 								varTypes["new " + type + "[" + size + "]"] = type + "[]";
 							}
 							break;
-						case 0xbd:
+						case 0xbd: // anewarray
 							{
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
@@ -1895,25 +1911,52 @@ void ClassFile::generate()
 							}
 							break;
 						case 0xbf: // athrow
-							// TODO
+							{
+								// TODO
+								cerr << "athrow not implemented." << endl;
+								std::string exception = jvm_stack.back();
+								jvm_stack.clear();
+								jvm_stack.push_back(exception);
+							}
 							break;
 						case 0xc0: // checkcast
-							// TODO
+							{
+								// TODO
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+							}
 							break;
 						case 0xc1: // instanceof
-							// TODO
+							{
+								unsigned char b1 = ref[++zz];
+								unsigned char b2 = ref[++zz];
+								int idx = ((b1 << 8) + b2);
+								
+								CPinfo info = constant_pool[idx];
+								CPinfo class_name = constant_pool[info.ClassInfo.name_index];
+								std::string className = checkClassName(class_name.UTF8Info.bytes);
+								
+								std::string obj = jvm_stack.back();
+								jvm_stack.clear();
+								jvm_stack.push_back(obj + "instanceof" + className);
+							}
 							break;
 						case 0xc2: // monitorenter
 							// TODO
+							cerr << "monitorenter not implemented." << endl;
 							break;
 						case 0xc3: // monitorexit
 							// TODO
+							cerr << "monitorexit not implemented." << endl;
 							break;
 						case 0xc4: // wide
 							// TODO
+							cerr << "wide not implemented." << endl;
 							break;
 						case 0xc5: // multianewarray
 							// TODO
+							cerr << "multianewarray not implemented." << endl;
 							break;
 						case 0xc6: // ifnull
 							IF_OPCODE("!= null")
@@ -1923,9 +1966,11 @@ void ClassFile::generate()
 							break;
 						case 0xc8: // goto_w
 							// TODO
+							cerr << "goto_w not implemented." << endl;
 							break;
 						case 0xc9: // jsr_w
 							// TODO
+							cerr << "jsr_w not implemented." << endl;
 							break;
 						case 0xca: // breakpoint
 							cerr << "reserved for breakpoints in Java debuggers; should not appear in any class file." << endl;
