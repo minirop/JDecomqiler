@@ -1065,19 +1065,79 @@ void ClassFile::generate()
 							jvm_stack.push_back(jvm_stack.back());
 							break;
 						case 0x5a: // dup_x1
-							// TODO
+							{
+								std::string value1 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value2 = jvm_stack.back();
+								jvm_stack.pop_back();
+								
+								jvm_stack.push_back(value1);
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+							}
 							break;
 						case 0x5b: // dup_x2
-							// TODO
+							{
+								std::string value1 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value2 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value3 = jvm_stack.back();
+								jvm_stack.pop_back();
+								
+								jvm_stack.push_back(value1);
+								jvm_stack.push_back(value3);
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+							}
 							break;
 						case 0x5c: // dup2
-							// TODO
+							{
+								std::string value1 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value2 = jvm_stack.back();
+								jvm_stack.pop_back();
+								
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+							}
 							break;
 						case 0x5d: // dup2_x1
-							// TODO
+							{
+								std::string value1 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value2 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value3 = jvm_stack.back();
+								jvm_stack.pop_back();
+								
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+								jvm_stack.push_back(value3);
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+							}
 							break;
 						case 0x5e: // dup2_x2
-							// TODO
+							{
+								std::string value1 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value2 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value3 = jvm_stack.back();
+								jvm_stack.pop_back();
+								std::string value4 = jvm_stack.back();
+								jvm_stack.pop_back();
+								
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+								jvm_stack.push_back(value4);
+								jvm_stack.push_back(value3);
+								jvm_stack.push_back(value2);
+								jvm_stack.push_back(value1);
+							}
 							break;
 						case 0x5f: // swap
 							{
@@ -1834,14 +1894,39 @@ void ClassFile::generate()
 								jvm_stack.push_back(arr + ".length");
 							}
 							break;
-							// --
+						case 0xbf: // athrow
+							// TODO
+							break;
+						case 0xc0: // checkcast
+							// TODO
+							break;
+						case 0xc1: // instanceof
+							// TODO
+							break;
+						case 0xc2: // monitorenter
+							// TODO
+							break;
+						case 0xc3: // monitorexit
+							// TODO
+							break;
+						case 0xc4: // wide
+							// TODO
+							break;
+						case 0xc5: // multianewarray
+							// TODO
+							break;
 						case 0xc6: // ifnull
 							IF_OPCODE("!= null")
 							break;
 						case 0xc7: // ifnonnull
 							IF_OPCODE("== null")
 							break;
-							// --
+						case 0xc8: // goto_w
+							// TODO
+							break;
+						case 0xc9: // jsr_w
+							// TODO
+							break;
 						case 0xca: // breakpoint
 							cerr << "reserved for breakpoints in Java debuggers; should not appear in any class file." << endl;
 							break;
