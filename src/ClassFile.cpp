@@ -521,6 +521,7 @@ std::string ClassFile::getName(std::uint16_t index)
 
 #define STORE_OBJECT(type, value, index) \
 	{ \
+		cout << "STORE_OBJECT: " << type << ", " << value << ", " << index << endl; \
 		std::string buffOutput; \
 		if(objectVariables[index].first != type) \
 		{ \
@@ -533,9 +534,11 @@ std::string ClassFile::getName(std::uint16_t index)
 			buffOutput += " "; \
 			objectVariables[index].first = type; \
 			objectVariables[index].second = removeArray(type) + std::to_string(objectTypeCounter[type]); \
+			varTypes[objectVariables[index].second] = type; \
 			objectTypeCounter[type]++; \
 		} \
 		\
+		cout << "----- " << index << " => " << type << ", " << objectVariables[index].first << ", " << objectVariables[index].second << endl; \
 		buffOutput += objectVariables[index].second; \
 		buffOutput += " = "; \
 		buffOutput += value; \
@@ -585,18 +588,19 @@ std::string ClassFile::getName(std::uint16_t index)
 			unsigned char b1 = ref[idx - 2 + 8]; \
 			unsigned char b2 = ref[idx - 1 + 8]; \
 			idxGoto = static_cast<signed short>((b1 << 8) + b2) + idx - 3; \
+			cout << "HAS GOTO" << endl; \
 		} \
 		\
 		if(hasGoto) \
 		{ \
-			if(idxGoto == opcodePos - 3)\
+			if(idxGoto < opcodePos)\
 			{ \
-				BUFF("while(" + x + " " op " " + y + ") {\n"); \
+				BUFF("while(" + y + " " op " " + x + ") {\n"); \
 				jumpTargets[idx].push_back("}\n"); \
 			} \
 			else \
 			{ \
-				BUFF("if(" + x + " " op " " + y + ") {\n"); \
+				BUFF("if(" + y + " " op " " + x + ") {\n"); \
 				jumpTargets[idx].push_back("} else {\n"); \
 				jumpTargets[idxGoto].push_back("}\n"); \
 			} \
@@ -879,8 +883,7 @@ void ClassFile::generate()
 						case OP_aload:
 							{
 								int idx = ref[++zz];
-								jvm_stack.push_back(std::string("a") + std::to_string(idx));
-								// TODO
+								jvm_stack.push_back(objectVariables[idx].second);
 							}
 							break;
 						case OP_iload_0:
@@ -933,18 +936,18 @@ void ClassFile::generate()
 							break;
 						case OP_aload_0:
 							if(m.isStatic)
-								jvm_stack.push_back("a0"); // TODO
+								jvm_stack.push_back(objectVariables[0].second);
 							else
 								jvm_stack.push_back("this");
 							break;
 						case OP_aload_1:
-							jvm_stack.push_back("a1"); // TODO
+							jvm_stack.push_back(objectVariables[1].second);
 							break;
 						case OP_aload_2:
-							jvm_stack.push_back("a2"); // TODO
+							jvm_stack.push_back(objectVariables[2].second);
 							break;
 						case OP_aload_3:
-							jvm_stack.push_back("a3"); // TODO
+							jvm_stack.push_back(objectVariables[3].second);
 							break;
 						case OP_iaload:
 						case OP_laload:
@@ -960,6 +963,14 @@ void ClassFile::generate()
 								std::string arr = jvm_stack.back();
 								jvm_stack.pop_back();
 								jvm_stack.push_back(arr + "[" + index + "]");
+								std::string oneDimensionLess = varTypes[arr];
+								size_t start_pos = oneDimensionLess.find("[]");
+								if(start_pos != std::string::npos)
+								{
+									oneDimensionLess.replace(start_pos, 10, std::string());
+								}
+								varTypes[arr + "[" + index + "]"] = oneDimensionLess;
+								
 							}
 							break;
 						case OP_istore:
@@ -1044,25 +1055,25 @@ void ClassFile::generate()
 						case OP_astore_0:
 							{
 								std::string varName = jvm_stack.back();
-								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 0)
+								STORE_OBJECT(varTypes[varName], varName, 0)
 							}
 							break;
 						case OP_astore_1:
 							{
 								std::string varName = jvm_stack.back();
-								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 1)
+								STORE_OBJECT(varTypes[varName], varName, 1)
 							}
 							break;
 						case OP_astore_2:
 							{
 								std::string varName = jvm_stack.back();
-								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 2)
+								STORE_OBJECT(varTypes[varName], varName, 2)
 							}
 							break;
 						case OP_astore_3:
 							{
 								std::string varName = jvm_stack.back();
-								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 3)
+								STORE_OBJECT(varTypes[varName], varName, 3)
 							}
 							break;
 						case OP_iastore:
