@@ -521,7 +521,6 @@ std::string ClassFile::getName(std::uint16_t index)
 
 #define STORE_OBJECT(type, value, index) \
 	{ \
-		cout << "STORE_OBJECT: " << type << ", " << value << ", " << index << endl; \
 		std::string buffOutput; \
 		if(objectVariables[index].first != type) \
 		{ \
@@ -538,7 +537,6 @@ std::string ClassFile::getName(std::uint16_t index)
 			objectTypeCounter[type]++; \
 		} \
 		\
-		cout << "----- " << index << " => " << type << ", " << objectVariables[index].first << ", " << objectVariables[index].second << endl; \
 		buffOutput += objectVariables[index].second; \
 		buffOutput += " = "; \
 		buffOutput += value; \
@@ -588,7 +586,6 @@ std::string ClassFile::getName(std::uint16_t index)
 			unsigned char b1 = ref[idx - 2 + 8]; \
 			unsigned char b2 = ref[idx - 1 + 8]; \
 			idxGoto = static_cast<signed short>((b1 << 8) + b2) + idx - 3; \
-			cout << "HAS GOTO" << endl; \
 		} \
 		\
 		if(hasGoto) \
