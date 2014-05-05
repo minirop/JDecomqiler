@@ -744,6 +744,7 @@ void ClassFile::generate()
 				std::vector<std::string> bufferMethod;
 				std::map<int, std::pair<std::string, std::string>> objectVariables; // int = variable ID, string = type of the object, string = name of the variable
 				std::map<std::string, int> objectTypeCounter;
+				bool nextInvokeIsNew = false;
 				
 				int end = code_size + 8;
 				for(int opcodePos = 0;zz < end;zz++)
@@ -1084,11 +1085,11 @@ void ClassFile::generate()
 							break;
 						case OP_pop:
 						case OP_pop2: // since we don't treat double as 2 values
-							BUFF(jvm_stack.back() + ";\n");
 							jvm_stack.pop_back();
 							break;
 						case OP_dup:
-							jvm_stack.push_back(jvm_stack.back());
+							if(!nextInvokeIsNew)
+								jvm_stack.push_back(jvm_stack.back());
 							break;
 						case OP_dup_x1:
 							{
@@ -1580,7 +1581,7 @@ void ClassFile::generate()
 						case OP_invokevirtual:
 						case OP_invokespecial:
 							{
-								bool invokevirtual = (c == 0xb6);
+								// bool invokevirtual = (c == 0xb6);
 								unsigned char b1 = ref[++zz];
 								unsigned char b2 = ref[++zz];
 								int idx = ((b1 << 8) + b2);
@@ -1596,44 +1597,55 @@ void ClassFile::generate()
 								std::string returnType = parametres.back();
 								parametres.pop_back(); // remove the return type
 								
-								std::string objectCalledUpon = jvm_stack[jvm_stack.size() - parametres.size() - 1];
-								
-								bool isNewCalled = false;
-								bool isInit = false;
-								
-								if(fun_name == "<init>")
+								std::string fun_call;
+								if(nextInvokeIsNew)
 								{
-									if(isCtor && objectCalledUpon == "this")
+									unsigned char nextOP = ref[zz+1];
+									int next = nextOP;
+									if(next != OP_pop)
 									{
-										// change this = new ParentClass() to this.super()
-										fun_name = "super";
+										if(!objectTypeCounter.count(cii_name))
+										{
+											objectTypeCounter[cii_name] = 0;
+										}
+										
+										fun_call += cii_name;
+										fun_call += " ";
+										fun_call += cii_name + std::to_string(objectTypeCounter[cii_name]);
+										objectTypeCounter[cii_name]++;
+										fun_call += " = ";
+										
+										switch(next)
+										{
+											case OP_astore:
+												zz++; // remove "index"
+											case OP_astore_0:
+											case OP_astore_1:
+											case OP_astore_2:
+											case OP_astore_3:
+												zz++; // remove the opcode
+											default:
+												;
+										}
 									}
 									else
 									{
-										isNewCalled = true;
-										fun_name = cii_name;
+										jvm_stack.push_back("/* garbage */");
 									}
-									
-									isInit = true;
-								}
-								
-								std::string fun_call;
-								if(!isInit && !invokevirtual)
-									fun_call += "((" + varTypes[objectCalledUpon] + ")";
-								fun_call += objectCalledUpon;
-								if(!isInit && !invokevirtual)
-									fun_call += ")";
-								
-								if(isNewCalled)
-								{
-									fun_call += " = new ";
+									fun_call += "new " + cii_name;
 								}
 								else
 								{
-									fun_call += ".";
+									if(fun_name == "<init>")
+									{
+										if(cii_name == output.extends)
+											fun_name = "super";
+										else
+											fun_name = cii_name;
+									}
+									fun_call += jvm_stack[jvm_stack.size() - parametres.size() - 1] + "." + fun_name;
 								}
 								
-								fun_call += fun_name;
 								fun_call += "(";
 								for(std::size_t pp = 0;pp < parametres.size();pp++)
 								{
@@ -1643,31 +1655,37 @@ void ClassFile::generate()
 									fun_call += jvm_stack[jvm_stack.size() - parametres.size() + pp];
 								}
 								
-								// <= to remove also the ObjectRef
-								for(std::size_t i = 0;i <= parametres.size();i++)
+								// remove the ObjectRef
+								if(!nextInvokeIsNew)
+									jvm_stack.pop_back();
+								for(std::size_t i = 0;i < parametres.size();i++)
 								{
 									jvm_stack.pop_back();
 								}
 								fun_call += ")";
 								
-								if(returnType != "void")
+								if(nextInvokeIsNew)
 								{
-									// std::string retName = "ret" + returnType;
-									// std::string retNameAndOrType = retName;
-									// if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
-									// {
-										// varTypes[retName] = returnType;
-										// retNames.push_back(returnType);
-										
-										// retNameAndOrType = returnType + " " + retName;
-									// }
-									// fun_call = retNameAndOrType + " = " + fun_call;
-									// jvm_stack.push_back(retName);
-									jvm_stack.push_back(fun_call);
+									BUFF(fun_call + ";\n");
 								}
 								else
 								{
-									BUFF(fun_call + ";\n");
+									if(returnType != "void")
+									{
+										jvm_stack.push_back(fun_call);
+										/* probaly need to have this kind of code
+										unsigned char nextOP = ref[zz+1];
+										int next = nextOP;
+										if(next == OP_pop)
+											BUFF
+										else
+											jvm_stack.push_back
+										*/
+									}
+									else
+									{
+										BUFF(fun_call + ";\n");
+									}
 								}
 							}
 							break;
@@ -1894,18 +1912,26 @@ void ClassFile::generate()
 								unsigned char b2 = ref[++zz];
 								int idx = ((b1 << 8) + b2);
 								
+								if(ref[zz+1] != OP_dup || (ref[zz+2] & 0xff) != OP_invokespecial)
+								{
+									cerr << "ERROR: after new it's not dup followed by invokespecial" << endl;
+								}
+								
+								nextInvokeIsNew = true;
+								
 								CPinfo info = constant_pool[idx];
 								CPinfo class_name = constant_pool[info.ClassInfo.name_index];
 								std::string className = checkClassName(class_name.UTF8Info.bytes);
 								
-								if(std::find(tmpNames.begin(), tmpNames.end(), className) == tmpNames.end())
-								{
-									BUFF(className + " tmp" + className + ";\n");
-									tmpNames.push_back(className);
-								}
+								// jvm_stack.push_back(className);
+								// if(std::find(tmpNames.begin(), tmpNames.end(), className) == tmpNames.end())
+								// {
+									// BUFF(className + " tmp" + className + ";\n");
+									// tmpNames.push_back(className);
+								// }
 								
-								jvm_stack.push_back("tmp" + className);
-								varTypes["tmp" + className] = className;
+								// jvm_stack.push_back("tmp" + className);
+								// varTypes["tmp" + className] = className;
 							}
 							break;
 						case OP_newarray:
