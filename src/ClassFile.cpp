@@ -532,7 +532,7 @@ std::string ClassFile::getName(std::uint16_t index)
 			buffOutput += type; \
 			buffOutput += " "; \
 			objectVariables[index].first = type; \
-			objectVariables[index].second = type + std::to_string(objectTypeCounter[type]); \
+			objectVariables[index].second = removeArray(type) + std::to_string(objectTypeCounter[type]); \
 			objectTypeCounter[type]++; \
 		} \
 		\
@@ -1611,7 +1611,7 @@ void ClassFile::generate()
 										
 										fun_call += cii_name;
 										fun_call += " ";
-										fun_call += cii_name + std::to_string(objectTypeCounter[cii_name]);
+										fun_call += removeArray(cii_name) + std::to_string(objectTypeCounter[cii_name]);
 										objectTypeCounter[cii_name]++;
 										fun_call += " = ";
 										
@@ -2215,4 +2215,15 @@ std::string ClassFile::typeFromInt(int typeInt)
 			;
 	}
 	return ret;
+}
+
+std::string ClassFile::removeArray(std::string className)
+{
+	size_t start_pos;
+	while((start_pos = className.find("[]")) != std::string::npos)
+	{
+		className.replace(start_pos, 2, "_arr");
+	}
+	
+	return className;
 }

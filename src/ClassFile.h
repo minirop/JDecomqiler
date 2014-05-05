@@ -134,6 +134,7 @@ private:
 	std::string checkClassName(std::string classname);
 	char letterFromType(std::string type);
 	std::string typeFromInt(int typeInt);
+	std::string removeArray(std::string className);
 };
 
 #endif
