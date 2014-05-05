@@ -519,6 +519,31 @@ std::string ClassFile::getName(std::uint16_t index)
 		BUFF(buffOutput); \
 	}
 
+#define STORE_OBJECT(type, value, index) \
+	{ \
+		std::string buffOutput; \
+		if(objectVariables[index].first != type) \
+		{ \
+			if(!objectTypeCounter.count(type)) \
+			{ \
+				objectTypeCounter[type] = 0; \
+			} \
+			\
+			buffOutput += type; \
+			buffOutput += " "; \
+			objectVariables[index].first = type; \
+			objectVariables[index].second = type + std::to_string(objectTypeCounter[type]); \
+			objectTypeCounter[type]++; \
+		} \
+		\
+		buffOutput += objectVariables[index].second; \
+		buffOutput += " = "; \
+		buffOutput += value; \
+		buffOutput += ";\n"; \
+		jvm_stack.pop_back(); \
+		BUFF(buffOutput); \
+	}
+
 #define IF_OPCODE(op) \
 	{ \
 		unsigned char b1 = ref[++zz]; \
@@ -717,6 +742,8 @@ void ClassFile::generate()
 				std::map<std::string, std::string> varTypes;
 				std::map<int, std::vector<std::string>> jumpTargets;
 				std::vector<std::string> bufferMethod;
+				std::map<int, std::pair<std::string, std::string>> objectVariables; // int = variable ID, string = type of the object, string = name of the variable
+				std::map<std::string, int> objectTypeCounter;
 				
 				int end = code_size + 8;
 				for(int opcodePos = 0;zz < end;zz++)
@@ -852,6 +879,7 @@ void ClassFile::generate()
 							{
 								int idx = ref[++zz];
 								jvm_stack.push_back(std::string("a") + std::to_string(idx));
+								// TODO
 							}
 							break;
 						case OP_iload_0:
@@ -904,18 +932,18 @@ void ClassFile::generate()
 							break;
 						case OP_aload_0:
 							if(m.isStatic)
-								jvm_stack.push_back("a0");
+								jvm_stack.push_back("a0"); // TODO
 							else
 								jvm_stack.push_back("this");
 							break;
 						case OP_aload_1:
-							jvm_stack.push_back("a1");
+							jvm_stack.push_back("a1"); // TODO
 							break;
 						case OP_aload_2:
-							jvm_stack.push_back("a2");
+							jvm_stack.push_back("a2"); // TODO
 							break;
 						case OP_aload_3:
-							jvm_stack.push_back("a3");
+							jvm_stack.push_back("a3"); // TODO
 							break;
 						case OP_iaload:
 						case OP_laload:
@@ -961,8 +989,7 @@ void ClassFile::generate()
 							{
 								int index = ref[++zz];
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], varName, index)
-								varTypes["a" + std::to_string(index)] = varTypes[varName];
+								STORE_OBJECT(varTypes[varName], varName, index)
 							}
 							break;
 						case OP_istore_0:
@@ -1016,29 +1043,25 @@ void ClassFile::generate()
 						case OP_astore_0:
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], jvm_stack.back(), 0)
-								varTypes["a0"] = varTypes[varName];
+								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 0)
 							}
 							break;
 						case OP_astore_1:
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], jvm_stack.back(), 1)
-								varTypes["a1"] = varTypes[varName];
+								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 1)
 							}
 							break;
 						case OP_astore_2:
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], jvm_stack.back(), 2)
-								varTypes["a2"] = varTypes[varName];
+								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 2)
 							}
 							break;
 						case OP_astore_3:
 							{
 								std::string varName = jvm_stack.back();
-								STORE(varTypes[varName], jvm_stack.back(), 3)
-								varTypes["a3"] = varTypes[varName];
+								STORE_OBJECT(varTypes[varName], jvm_stack.back(), 3)
 							}
 							break;
 						case OP_iastore:
@@ -1061,6 +1084,7 @@ void ClassFile::generate()
 							break;
 						case OP_pop:
 						case OP_pop2: // since we don't treat double as 2 values
+							BUFF(jvm_stack.back() + ";\n");
 							jvm_stack.pop_back();
 							break;
 						case OP_dup:
@@ -1624,24 +1648,27 @@ void ClassFile::generate()
 								{
 									jvm_stack.pop_back();
 								}
-								fun_call += ");\n";
+								fun_call += ")";
 								
 								if(returnType != "void")
 								{
-									std::string retName = "ret" + returnType;
-									std::string retNameAndOrType = retName;
-									if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
-									{
-										varTypes[retName] = returnType;
-										retNames.push_back(returnType);
+									// std::string retName = "ret" + returnType;
+									// std::string retNameAndOrType = retName;
+									// if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
+									// {
+										// varTypes[retName] = returnType;
+										// retNames.push_back(returnType);
 										
-										retNameAndOrType = returnType + " " + retName;
-									}
-									fun_call = retNameAndOrType + " = " + fun_call;
-									jvm_stack.push_back(retName);
+										// retNameAndOrType = returnType + " " + retName;
+									// }
+									// fun_call = retNameAndOrType + " = " + fun_call;
+									// jvm_stack.push_back(retName);
+									jvm_stack.push_back(fun_call);
 								}
-								
-								BUFF(fun_call);
+								else
+								{
+									BUFF(fun_call + ";\n");
+								}
 							}
 							break;
 						case OP_invokestatic:
@@ -1746,24 +1773,27 @@ void ClassFile::generate()
 								{
 									jvm_stack.pop_back();
 								}
-								fun_call += ");\n";
+								fun_call += ")";
 								
 								if(returnType != "void")
 								{
-									std::string retName = "ret" + returnType;
-									std::string retNameAndOrType = retName;
-									if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
-									{
-										varTypes[retName] = returnType;
-										retNames.push_back(returnType);
+									// std::string retName = "ret" + returnType;
+									// std::string retNameAndOrType = retName;
+									// if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
+									// {
+										// varTypes[retName] = returnType;
+										// retNames.push_back(returnType);
 										
-										retNameAndOrType = returnType + " " + retName;
-									}
-									fun_call = retNameAndOrType + " = " + fun_call;
-									jvm_stack.push_back(retName);
+										// retNameAndOrType = returnType + " " + retName;
+									// }
+									// fun_call = retNameAndOrType + " = " + fun_call;
+									// jvm_stack.push_back(retName);
+									jvm_stack.push_back(fun_call);
 								}
-								
-								BUFF(fun_call);
+								else
+								{
+									BUFF(fun_call + ";\n");
+								}
 							}
 							break;
 						case OP_invokedynamic: // (check if can be a new)
@@ -1835,24 +1865,27 @@ void ClassFile::generate()
 								{
 									jvm_stack.pop_back();
 								}
-								fun_call += ");\n";
+								fun_call += ")";
 								
 								if(returnType != "void")
 								{
-									std::string retName = "ret" + returnType;
-									std::string retNameAndOrType = retName;
-									if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
-									{
-										varTypes[retName] = returnType;
-										retNames.push_back(returnType);
+									// std::string retName = "ret" + returnType;
+									// std::string retNameAndOrType = retName;
+									// if(std::find(retNames.begin(), retNames.end(), returnType) == retNames.end())
+									// {
+										// varTypes[retName] = returnType;
+										// retNames.push_back(returnType);
 										
-										retNameAndOrType = returnType + " " + retName;
-									}
-									fun_call = retNameAndOrType + " = " + fun_call;
-									jvm_stack.push_back(retName);
+										// retNameAndOrType = returnType + " " + retName;
+									// }
+									// fun_call = retNameAndOrType + " = " + fun_call;
+									// jvm_stack.push_back(retName);
+									jvm_stack.push_back(fun_call);
 								}
-								
-								BUFF(fun_call);
+								else
+								{
+									BUFF(fun_call + ";\n");
+								}
 							}
 							break;
 						case OP_new:
