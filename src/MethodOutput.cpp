@@ -1015,8 +1015,14 @@ void MethodOutput::generate(std::ofstream & file)
 							std::string retour = params.back();
 							params.pop_back();
 							
-							std::string func_call = checkClassName(getName(class_index_info.ClassInfo.name_index)) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index);
-							jvm_stack.push_back(func_call);
+							std::string static_call;
+							std::string staticClassName = checkClassName(getName(class_index_info.ClassInfo.name_index));
+							if(staticClassName != thisClass)
+							{
+								static_call += staticClassName + ".";
+							}
+							static_call += getName(name_and_type_index_info.NameAndTypeInfo.name_index);
+							jvm_stack.push_back(static_call);
 						}
 						break;
 					case OP_putstatic:
@@ -1034,7 +1040,13 @@ void MethodOutput::generate(std::ofstream & file)
 							std::string retour = params.back();
 							params.pop_back();
 							
-							std::string tmp = getName(class_index_info.ClassInfo.name_index) + "." + getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
+							std::string staticClassName = getName(class_index_info.ClassInfo.name_index);
+							std::string tmp;
+							if(staticClassName != thisClass)
+							{
+								tmp += staticClassName + ".";
+							}
+							tmp += getName(name_and_type_index_info.NameAndTypeInfo.name_index) + " = " + jvm_stack[jvm_stack.size() - 1] + ";\n";
 							
 							BUFF(tmp);
 							
@@ -1150,7 +1162,18 @@ void MethodOutput::generate(std::ofstream & file)
 									else
 										fun_name = cii_name;
 								}
-								fun_call += jvm_stack[jvm_stack.size() - parametres.size() - 1] + "." + fun_name;
+								
+								if(jvm_stack[jvm_stack.size() - parametres.size() - 1] != "this")
+								{
+									fun_call += jvm_stack[jvm_stack.size() - parametres.size() - 1] + ".";
+								}
+								else
+								{
+									if(fun_name == "super" && parentClass == "Object")
+										break;
+								}
+								
+								fun_call += fun_name;
 							}
 							
 							fun_call += "(";
@@ -1169,7 +1192,7 @@ void MethodOutput::generate(std::ofstream & file)
 							{
 								jvm_stack.pop_back();
 							}
-							fun_call += ")  /* invokespecial/virtual */ ";
+							fun_call += ")";
 							
 							if(nextInvokeIsNew)
 							{
@@ -1226,7 +1249,7 @@ void MethodOutput::generate(std::ofstream & file)
 							{
 								jvm_stack.pop_back();
 							}
-							fun_call += ") /* invokestatic */ ;\n";
+							fun_call += ");\n";
 							
 							BUFF(fun_call);
 						}
@@ -1298,7 +1321,7 @@ void MethodOutput::generate(std::ofstream & file)
 							{
 								jvm_stack.pop_back();
 							}
-							fun_call += ") /* invokeinterface */ ";
+							fun_call += ")";
 							
 							if(returnType != "void")
 							{
@@ -1390,7 +1413,7 @@ void MethodOutput::generate(std::ofstream & file)
 							{
 								jvm_stack.pop_back();
 							}
-							fun_call += ") /* invokedynamic */ ";
+							fun_call += ")";
 							
 							if(returnType != "void")
 							{
