@@ -25,6 +25,7 @@ freely, subject to the following restrictions:
 #ifndef METHODOUTPUT_H
 #define METHODOUTPUT_H
 
+#include "CPinfo.h"
 #include <string>
 #include <tuple>
 #include <vector>
@@ -39,12 +40,17 @@ public:
 	{
 	}
 	
+	void generate(std::ofstream & file);
+	
 	std::string name;
 	std::string returnType;
 	std::vector<std::string> parametersType;
 	std::vector<std::tuple<std::string, std::string>> attributes;
 	bool isPublic, isProtected, isPrivate, isAbstract, isFinal, isStatic;
 	bool isSynchronized, isBridge, isVarargs, isNative, isStrict;
+	//
+	std::string thisClass;
+	std::string parentClass;
 };
 
 #endif

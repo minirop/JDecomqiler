@@ -25,7 +25,6 @@ freely, subject to the following restrictions:
 #ifndef CLASSFILE_H
 #define CLASSFILE_H
 
-#include <cstdint>
 #include <fstream>
 #include <map>
 #include <string>
@@ -33,56 +32,8 @@ freely, subject to the following restrictions:
 #include <vector>
 
 #include "ClassOutput.h"
-
-enum {
-	CONSTANT_Utf8 = 1,
-	CONSTANT_Integer = 3,
-	CONSTANT_Float = 4,
-	CONSTANT_Long = 5,
-	CONSTANT_Double = 6,
-	CONSTANT_Class = 7,
-	CONSTANT_String = 8,
-	CONSTANT_Fieldref = 9,
-	CONSTANT_Methodref = 10,
-	CONSTANT_InterfaceMethodref = 11,
-	CONSTANT_NameAndType = 12
-};
-
-struct CPinfo {
-	std::uint8_t tag;
-	union {
-		struct {
-			std::uint16_t name_index;
-		} ClassInfo;
-		struct {
-			std::uint16_t class_index;
-			std::uint16_t name_and_type_index;
-		} RefInfo;
-		struct {
-			std::uint16_t string_index;
-		} StringInfo;
-		struct {
-			std::uint32_t bytes;
-		} IntegerInfo;
-		struct {
-			std::uint32_t bytes;
-		} FloatInfo;
-		struct {
-			std::uint64_t bytes;
-		} BigIntInfo;
-		struct {
-			std::uint64_t bytes;
-		} DoubleInfo;
-		struct {
-			std::uint16_t name_index;
-			std::uint16_t descriptor_index;
-		} NameAndTypeInfo;
-		struct {
-			std::uint16_t length;
-			char * bytes; // (1) find a better way
-		} UTF8Info;
-	};
-};
+#include "CPinfo.h"
+#include "Helpers.h"
 
 class StreamReader
 {
@@ -115,7 +66,6 @@ public:
 
 private:
 	ClassOutput output;
-	std::vector<CPinfo> constant_pool;
 	
 	std::vector<char *> toDelete; // find a better way (see (1))
 	
@@ -127,14 +77,6 @@ private:
 	FieldOutput parseField();
 	std::string parseInterface();
 	MethodOutput parseMethod();
-	
-	std::string getName(uint16_t index);
-	std::vector<std::string> parseSignature(std::string signature);
-	std::string parseType(std::string signature, int & i);
-	std::string checkClassName(std::string classname);
-	char letterFromType(std::string type);
-	std::string typeFromInt(int typeInt);
-	std::string removeArray(std::string className);
 };
 
 #endif

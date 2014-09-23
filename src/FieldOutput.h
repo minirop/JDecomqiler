@@ -38,6 +38,8 @@ public:
 	{
 	}
 	
+	void generate(std::ofstream & file);
+	
 	std::string name;
 	std::string type;
 	std::vector<std::tuple<std::string, std::string>> attributes;

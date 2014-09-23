@@ -39,6 +39,8 @@ public:
 	{
 	}
 	
+	void generate(std::ofstream & file);
+	
 	std::string name;
 	std::string extends;
 	std::vector<std::string> interfaces;
