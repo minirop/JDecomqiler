@@ -974,8 +974,48 @@ void MethodOutput::generate(std::ofstream & file)
 						}
 						break;
 					case OP_tableswitch:
-						// TODO
-						cerr << "tableswitch not implemented, segfault incoming." << endl;
+						{
+							// TODO
+							cerr << "tableswitch not implemented, segfault incoming." << endl;
+							int tableSwitchOpcodePosition = zz;
+							zz += ((zz+1) % 4); // padding
+							
+							// default jump
+							unsigned char d1 = ref[++zz];
+							unsigned char d2 = ref[++zz];
+							unsigned char d3 = ref[++zz];
+							unsigned char d4 = ref[++zz];
+							int defaultJump = static_cast<int>((d1 << 24) + (d2 << 16) + (d3 << 8) + d4);
+							
+							// low jump
+							unsigned char l1 = ref[++zz];
+							unsigned char l2 = ref[++zz];
+							unsigned char l3 = ref[++zz];
+							unsigned char l4 = ref[++zz];
+							int lowJump = static_cast<int>((l1 << 24) + (l2 << 16) + (l3 << 8) + l4);
+							
+							// high jump
+							unsigned char h1 = ref[++zz];
+							unsigned char h2 = ref[++zz];
+							unsigned char h3 = ref[++zz];
+							unsigned char h4 = ref[++zz];
+							int highJump = static_cast<int>((h1 << 24) + (h2 << 16) + (h3 << 8) + h4);
+							
+							// dunno where the 7 comes from.
+							cout << "tableswitch: " << jvm_stack.back() << " => " << (defaultJump + tableSwitchOpcodePosition + 7) << ", " << lowJump << ", " << highJump << endl;
+							switchTableDefault = (defaultJump + tableSwitchOpcodePosition + 7);
+							
+							for(int i = lowJump;i <= highJump;i++)
+							{
+								unsigned char jumpTarget1 = ref[++zz];
+								unsigned char jumpTarget2 = ref[++zz];
+								unsigned char jumpTarget3 = ref[++zz];
+								unsigned char jumpTarget4 = ref[++zz];
+								int jumpTarget = static_cast<int>((jumpTarget1 << 24) + (jumpTarget2 << 16) + (jumpTarget3 << 8) + jumpTarget4);
+								cout << "jumpTarget " << i << " : " << (jumpTarget + tableSwitchOpcodePosition + 7) << endl;
+								switchTable[(jumpTarget + tableSwitchOpcodePosition + 7)] = i;
+							}
+						}
 						break;
 					case OP_lookupswitch:
 						// TODO
@@ -1500,7 +1540,7 @@ void MethodOutput::generate(std::ofstream & file)
 					case OP_athrow:
 						{
 							// TODO
-							cerr << "athrow not implemented." << endl;
+							cerr << "athrow not implemented:" << endl;
 							std::string exception = jvm_stack.back();
 							jvm_stack.clear();
 							jvm_stack.push_back(exception);
