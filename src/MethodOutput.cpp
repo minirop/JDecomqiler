@@ -155,10 +155,10 @@ void MethodOutput::generate(std::ofstream & file)
 		W("private ");
 	if(isAbstract)
 		W("abstract ");
-	if(isFinal)
-		W("final ");
 	if(isStatic)
 		W("static ");
+	if(isFinal)
+		W("final ");
 	
 	if(name == "<clinit>")
 	{

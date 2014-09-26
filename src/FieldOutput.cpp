@@ -35,14 +35,14 @@ void FieldOutput::generate(std::ofstream & file)
 		W("protected ");
 	if(isPrivate)
 		W("private ");
-	if(isVolatile)
-		W("volatile ");
-	if(isTransient)
-		W("transient ");
-	if(isFinal)
-		W("final ");
 	if(isStatic)
 		W("static ");
+	if(isFinal)
+		W("final ");
+	if(isTransient)
+		W("transient ");
+	if(isVolatile)
+		W("volatile ");
 	
 	W(type);
 	W(" ");
