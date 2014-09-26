@@ -38,7 +38,10 @@ enum {
 	CONSTANT_Fieldref = 9,
 	CONSTANT_Methodref = 10,
 	CONSTANT_InterfaceMethodref = 11,
-	CONSTANT_NameAndType = 12
+	CONSTANT_NameAndType = 12,
+	CONSTANT_MethodHandle = 15,
+	CONSTANT_MethodType = 16,
+	CONSTANT_InvokeDynamic = 18
 };
 
 struct CPinfo {
@@ -74,6 +77,17 @@ struct CPinfo {
 			std::uint16_t length;
 			char * bytes; // (1) find a better way
 		} UTF8Info;
+		struct {
+			std::uint8_t reference_kind;
+			std::uint16_t reference_index;
+		} MethodHandleInfo;
+		struct {
+			std::uint16_t descriptor_index;
+		} MethodTypeInfo;
+		struct {
+			std::uint16_t bootstrap_method_attr_index;
+			std::uint16_t name_and_type_index;
+		} InvokeDynamicInfo;
 	};
 };
 

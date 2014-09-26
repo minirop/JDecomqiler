@@ -286,6 +286,17 @@ bool ClassFile::parseConstant()
 			stream >> info.NameAndTypeInfo.name_index;
 			stream >> info.NameAndTypeInfo.descriptor_index;
 			break;
+		case CONSTANT_MethodHandle:
+			stream >> info.MethodHandleInfo.reference_kind;
+			stream >> info.MethodHandleInfo.reference_index;
+			break;
+		case CONSTANT_MethodType:
+			stream >> info.MethodTypeInfo.descriptor_index;
+			break;
+		case CONSTANT_InvokeDynamic:
+			stream >> info.InvokeDynamicInfo.bootstrap_method_attr_index;
+			stream >> info.InvokeDynamicInfo.name_and_type_index;
+			break;
 		default:
 			cerr << "ERROR: unrecognize TAG" << endl;
 			exit(1);
