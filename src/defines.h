@@ -25,21 +25,21 @@ freely, subject to the following restrictions:
 #ifndef ACCESS_CONTROL_H
 #define ACCESS_CONTROL_H
 
-#define ACC_PUBLIC       0x0001
-#define ACC_PRIVATE      0x0002
-#define ACC_PROTECTED    0x0004
-#define ACC_STATIC       0x0008
-#define ACC_FINAL        0x0010
-#define ACC_SYNCHRONIZED 0x0020
+#define ACC_PUBLIC       0x0001 // fields && methods
+#define ACC_PRIVATE      0x0002 // fields && methods
+#define ACC_PROTECTED    0x0004 // fields && methods
+#define ACC_STATIC       0x0008 // fields && methods
+#define ACC_FINAL        0x0010 // fields && methods
+#define ACC_SYNCHRONIZED 0x0020 // methods only
 #define ACC_BRIDGE       0x0040 // methods only
 #define ACC_VARARGS      0x0080 // methods only
 #define ACC_VOLATILE	 0x0040 // fields only
 #define ACC_TRANSIENT	 0x0080 // fields only
-#define ACC_NATIVE       0x0100
-#define ACC_ABSTRACT     0x0400
-#define ACC_STRICT       0x0800
-#define ACC_SYNTHETIC    0x1000
-#define ACC_ENUM         0x4000
+#define ACC_NATIVE       0x0100 // methods only
+#define ACC_ABSTRACT     0x0400 // methods only
+#define ACC_STRICT       0x0800 // methods only
+#define ACC_SYNTHETIC    0x1000 // fields && methods, not present in code source
+#define ACC_ENUM         0x4000 // fields only
 
 #define ACC_METHOD_MASK  0x1DFF
 #define ACC_FIELD_MASK   0x50DF
