@@ -1003,7 +1003,6 @@ void MethodOutput::generate(std::ofstream & file)
 							
 							// dunno where the 7 comes from.
 							cout << "tableswitch: " << jvm_stack.back() << " => " << (defaultJump + tableSwitchOpcodePosition + 7) << ", " << lowJump << ", " << highJump << endl;
-							switchTableDefault = (defaultJump + tableSwitchOpcodePosition + 7);
 							
 							for(int i = lowJump;i <= highJump;i++)
 							{
@@ -1013,7 +1012,6 @@ void MethodOutput::generate(std::ofstream & file)
 								unsigned char jumpTarget4 = ref[++zz];
 								int jumpTarget = static_cast<int>((jumpTarget1 << 24) + (jumpTarget2 << 16) + (jumpTarget3 << 8) + jumpTarget4);
 								cout << "jumpTarget " << i << " : " << (jumpTarget + tableSwitchOpcodePosition + 7) << endl;
-								switchTable[(jumpTarget + tableSwitchOpcodePosition + 7)] = i;
 							}
 						}
 						break;
