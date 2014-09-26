@@ -37,6 +37,8 @@ void ClassOutput::generate(std::ofstream & file)
 		W("final ");
 	if(isInterface)
 		W("interface ");
+	else if(isEnum)
+		W("enum ");
 	else
 		W("class ");
 	
