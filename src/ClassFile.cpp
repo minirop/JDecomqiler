@@ -144,16 +144,20 @@ ClassFile::ClassFile(std::string filename)
 	std::uint16_t access_flags, this_class, super_class;
 	stream >> access_flags >> this_class >> super_class;
 	
-	if(access_flags & 0x0001)
+	if(access_flags & ACC_PUBLIC)
 		output.isPublic = true;
-	if(access_flags & 0x0010)
+	if(access_flags & ACC_FINAL)
 		output.isFinal = true;
-	if(access_flags & 0x0020)
-		cout << "is super" << endl;
-	if(access_flags & 0x0200)
+	if(access_flags & ACC_SUPER)
+		cout << "is super, ignored." << endl;
+	if(access_flags & ACC_INTERFACE)
 		output.isInterface = true;
-	if(access_flags & 0x0400)
+	if(access_flags & ACC_ABSTRACT)
 		output.isAbstract = true;
+	if(access_flags & ACC_ANNOTATION)
+		output.isAnnotation = true;
+	if(access_flags & ACC_ENUM)
+		output.isEnum = true;
 	if(access_flags & (~0x0631))
 		cout << "ERROR: unrecognized flag(s)" << endl;
 	

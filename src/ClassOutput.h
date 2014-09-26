@@ -35,7 +35,7 @@ class ClassOutput
 {
 public:
 	ClassOutput() :
-		isFinal(false), isAbstract(false), isInterface(false), isPublic(false)
+		isFinal(false), isAbstract(false), isInterface(false), isPublic(false), isAnnotation(false), isEnum(false)
 	{
 	}
 	
@@ -46,7 +46,7 @@ public:
 	std::vector<std::string> interfaces;
 	std::vector<MethodOutput> methods;
 	std::vector<FieldOutput> fields;
-	bool isFinal, isAbstract, isInterface, isPublic;
+	bool isFinal, isAbstract, isInterface, isPublic, isAnnotation, isEnum;
 };
 
 #endif
