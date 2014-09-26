@@ -164,11 +164,23 @@ std::string parseType(std::string signature, int & i)
 	std::string tmp;
 	switch(signature[i])
 	{
-		case 'V':
-			tmp = "void";
+		case 'B':
+			tmp = "byte";
+			break;
+		case 'C':
+			tmp = "char";
+			break;
+		case 'D':
+			tmp = "double";
+			break;
+		case 'F':
+			tmp = "float";
 			break;
 		case 'I':
 			tmp = "int";
+			break;
+		case 'J':
+			tmp = "long";
 			break;
 		case 'L':
 			do
@@ -177,6 +189,12 @@ std::string parseType(std::string signature, int & i)
 				tmp += signature[i];
 			} while(signature[i] != ';');
 			tmp.pop_back();
+			break;
+		case 'S':
+			tmp = "short";
+			break;
+		case 'Z':
+			tmp = "boolean";
 			break;
 		case '[':
 			i++;
