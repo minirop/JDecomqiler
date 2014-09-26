@@ -32,18 +32,18 @@ freely, subject to the following restrictions:
 class FieldOutput
 {
 public:
-	FieldOutput() :
-		isPublic(false), isProtected(false), isPrivate(false), isVolatile(false),
-		isFinal(false), isStatic(false), isTransient(false)
-	{
-	}
-	
 	void generate(std::ofstream & file);
 	
 	std::string name;
 	std::string type;
 	std::vector<std::tuple<std::string, std::string>> attributes;
-	bool isPublic, isProtected, isPrivate, isVolatile, isFinal, isStatic, isTransient;
+	bool isPublic = false,
+		 isProtected = false,
+		 isPrivate = false,
+		 isVolatile = false,
+		 isFinal = false,
+		 isStatic = false,
+		 isTransient = false;
 };
 
 #endif

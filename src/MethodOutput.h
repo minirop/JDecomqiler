@@ -33,21 +33,23 @@ freely, subject to the following restrictions:
 class MethodOutput
 {
 public:
-	MethodOutput() :
-		isPublic(false), isProtected(false), isPrivate(false), isAbstract(false),
-		isFinal(false), isStatic(false), isSynchronized(false), isBridge(false),
-		isVarargs(false), isNative(false), isStrict(false)
-	{
-	}
-	
 	void generate(std::ofstream & file);
 	
 	std::string name;
 	std::string returnType;
 	std::vector<std::string> parametersType;
 	std::vector<std::tuple<std::string, std::string>> attributes;
-	bool isPublic, isProtected, isPrivate, isAbstract, isFinal, isStatic;
-	bool isSynchronized, isBridge, isVarargs, isNative, isStrict;
+	bool isPublic = false,
+		 isProtected = false,
+		 isPrivate = false,
+		 isAbstract = false,
+		 isFinal = false,
+		 isStatic = false,
+		 isSynchronized = false,
+		 isBridge = false,
+		 isVarargs = false,
+		 isNative = false,
+		 isStrict = false;
 	//
 	std::string thisClass;
 	std::string parentClass;

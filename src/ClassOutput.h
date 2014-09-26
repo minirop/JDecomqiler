@@ -34,11 +34,6 @@ freely, subject to the following restrictions:
 class ClassOutput
 {
 public:
-	ClassOutput() :
-		isFinal(false), isAbstract(false), isInterface(false), isPublic(false), isAnnotation(false), isEnum(false)
-	{
-	}
-	
 	void generate(std::ofstream & file);
 	
 	std::string name;
@@ -46,7 +41,12 @@ public:
 	std::vector<std::string> interfaces;
 	std::vector<MethodOutput> methods;
 	std::vector<FieldOutput> fields;
-	bool isFinal, isAbstract, isInterface, isPublic, isAnnotation, isEnum;
+	bool isFinal = false,
+		 isAbstract = false,
+		 isInterface = false,
+		 isPublic = false,
+		 isAnnotation = false,
+		 isEnum = false;
 };
 
 #endif
