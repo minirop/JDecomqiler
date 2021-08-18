@@ -145,7 +145,6 @@ using namespace std;
 void MethodOutput::generate(std::ofstream & file)
 {
 	bool isCtor = false;
-	bool skip_return = false;
 	
 	if(isPublic)
 		W("public ");
@@ -162,7 +161,6 @@ void MethodOutput::generate(std::ofstream & file)
 	
 	if(name == "<clinit>")
 	{
-		skip_return = true; // java bytecode have "return" at the end of static initialization blocks
 	}
 	else
 	{
@@ -251,6 +249,8 @@ void MethodOutput::generate(std::ofstream & file)
 			{
 				opcodePos = zz - 8;
 				bufferMethod.push_back("/*" + std::to_string(opcodePos) + "*/ ");
+
+				bool isLastOpcode = zz + 1 >= end;
 				
 				unsigned char c = ref[zz];
 				switch(c)
@@ -1028,17 +1028,17 @@ void MethodOutput::generate(std::ofstream & file)
 						jvm_stack.pop_back();
 						break;
 					case OP_return:
-						jvm_stack.clear();
-						/*
-						static { i = 3; } gets a "return" opcode,
-						since "static { i = 3; return; } is invalid,
-						we need to get rid of it
-						*/
-						if(!skip_return)
 						{
-							BUFF("return;\n");
+							if (!isLastOpcode)
+							{
+								BUFF("return;\n");
+							}
+							else
+							{
+								jvm_stack.clear();
+							}
+							break;
 						}
-						break;
 					case OP_getstatic:
 						{
 							unsigned char b1 = ref[++zz];

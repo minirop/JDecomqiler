@@ -23,12 +23,17 @@ freely, subject to the following restrictions:
    distribution.
 */
 #include "ClassFile.h"
+#include <iostream>
 
-int main(void)
+int main(int argc, char** argv)
 {
-	ClassFile cf("Test.class");
+   if (argc != 2)
+   {
+      std::cerr << "usage: " << argv[0] << " <file.class>\n";
+      return 1;
+   }
+
+	ClassFile cf(argv[1]);
 	cf.generate();
-	
-	system("pause");
 	return 0;
 }

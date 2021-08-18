@@ -201,6 +201,9 @@ std::string parseType(std::string signature, int & i)
 			tmp = parseType(signature, i);
 			tmp += "[]";
 			break;
+		case 'V':
+			tmp = "void";
+			break;
 		default:
 			cerr << "unrecognized parameter '" << signature[i] << "' type in signature" << endl;
 			exit(1);
