@@ -138,6 +138,7 @@ using namespace std;
 		} \
 		else \
 		{ \
+			BUFF("if(" + y + " " op " " + x + ") {\n"); \
 			jumpTargets[idx].push_back("}\n"); \
 		} \
 	}
