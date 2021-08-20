@@ -1156,6 +1156,7 @@ void MethodOutput::generate(std::ofstream & file)
 							parametres.pop_back(); // remove the return type
 							
 							std::string fun_call;
+							std::string variable_name;
 							if(nextInvokeIsNew)
 							{
 								unsigned char nextOP = ref[zz+1];
@@ -1167,9 +1168,10 @@ void MethodOutput::generate(std::ofstream & file)
 										objectTypeCounter[cii_name] = 0;
 									}
 									
+									variable_name = removeArray(cii_name) + std::to_string(objectTypeCounter[cii_name]);
 									fun_call += cii_name;
 									fun_call += " ";
-									fun_call += removeArray(cii_name) + std::to_string(objectTypeCounter[cii_name]);
+									fun_call += variable_name;
 									objectTypeCounter[cii_name]++;
 									fun_call += " = ";
 									
@@ -1236,6 +1238,7 @@ void MethodOutput::generate(std::ofstream & file)
 							if(nextInvokeIsNew)
 							{
 								BUFF(fun_call + ";\n");
+								jvm_stack.push_back(variable_name);
 							}
 							else
 							{
@@ -1481,9 +1484,9 @@ void MethodOutput::generate(std::ofstream & file)
 							unsigned char b2 = ref[++zz];
 							int idx = ((b1 << 8) + b2);
 							
-							if(ref[zz+1] != OP_dup || (ref[zz+2] & 0xff) != OP_invokespecial)
+							if(ref[zz+1] != OP_dup)
 							{
-								cerr << "ERROR: after new it's not dup followed by invokespecial" << endl;
+								cerr << "ERROR: after new it's not dup" << endl;
 							}
 							
 							nextInvokeIsNew = true;
